@@ -17,6 +17,7 @@ export default defineConfig({
         'src/vite-env.d.ts',
         'src/assets/**',
       ],
+      // App.tsx is now real code with its own tests (Story 3.3).
       thresholds: {
         lines: 80,
         branches: 80,
