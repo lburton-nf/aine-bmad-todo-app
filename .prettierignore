@@ -1,0 +1,8 @@
+node_modules
+dist
+.claude
+_bmad
+_bmad-output
+docs
+package-lock.json
+data

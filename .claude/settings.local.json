@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 *)",
+      "Bash(npm create *)",
+      "Bash(npm install *)",
+      "Bash(mkdir -p /Users/lisaannburton/projects/bmad-tutorials/todo-app-3/server /Users/lisaannburton/projects/bmad-tutorials/todo-app-3/shared)",
+      "Bash(touch /Users/lisaannburton/projects/bmad-tutorials/todo-app-3/shared/.gitkeep)",
+      "Bash(npm init *)",
+      "Bash(npm test *)",
+      "Bash(npm run *)",
+      "Bash(npx prettier *)",
+      "Bash(timeout 5 sh -c \"cd /Users/lisaannburton/projects/bmad-tutorials/todo-app-3/server && npx tsx src/index.ts\")",
+      "Bash(npx tsx *)"
+    ]
+  }
+}
