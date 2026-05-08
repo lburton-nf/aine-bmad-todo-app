@@ -54,8 +54,11 @@ test('deleting a single todo removes it from the list', async ({ page }) => {
   await page.getByPlaceholder('Add a todo…').press('Enter');
   await expect(page.getByText('to be deleted')).toBeVisible();
 
-  // The delete glyph is hover/focus-revealed; .click() triggers focus on it.
-  await page.getByRole('button', { name: 'Delete' }).first().click();
+  // The delete glyph is `visibility: hidden` until row hover/focus, so
+  // hover the row first so the button becomes interactable.
+  const row = page.locator('.todo-item').first();
+  await row.hover();
+  await row.getByRole('button', { name: 'Delete' }).click();
   await expect(page.getByText('to be deleted')).toHaveCount(0);
   await expect(page.getByText('No todos yet.')).toBeVisible();
 });
