@@ -1,0 +1,14 @@
+**/node_modules
+**/dist
+**/coverage
+**/data
+.git
+.gitignore
+.claude
+_bmad
+_bmad-output
+docs
+*.log
+.DS_Store
+.env
+.env.*

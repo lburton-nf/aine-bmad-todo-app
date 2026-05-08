@@ -4,7 +4,11 @@ import { initialize } from './db';
 
 async function main(): Promise<void> {
   const db = initialize(env.DB_PATH);
-  const app = await buildServer({ corsOrigin: env.CORS_ORIGIN, db });
+  const app = await buildServer({
+    corsOrigin: env.CORS_ORIGIN,
+    db,
+    staticRoot: env.STATIC_ROOT,
+  });
 
   // Graceful shutdown — Docker SIGTERM, Ctrl-C SIGINT. app.close() drains
   // in-flight requests AND triggers the onClose hook that closes the db.

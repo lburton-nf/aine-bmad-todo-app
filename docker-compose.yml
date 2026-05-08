@@ -1,0 +1,19 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: todo-app-3
+    container_name: todo-app-3
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    volumes:
+      - ./data:/data
+    environment:
+      NODE_ENV: production
+      PORT: '3000'
+      DB_PATH: /data/todos.db
+      # CORS_ORIGIN is required when NODE_ENV=production.
+      # Single-image deploy is same-origin; set to the public URL of the app.
+      CORS_ORIGIN: http://localhost:3000

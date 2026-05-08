@@ -37,6 +37,9 @@ export const env = Object.freeze({
   DB_PATH: process.env.DB_PATH ?? './data/todos.db',
   CORS_ORIGIN,
   NODE_ENV,
+  /** When set, the Fastify server serves static files from this path
+      (single-image Docker deploy). Unset in dev — Vite serves the client. */
+  STATIC_ROOT: process.env.STATIC_ROOT?.trim() || undefined,
 });
 
 export type Env = typeof env;

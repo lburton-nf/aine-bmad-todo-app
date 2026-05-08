@@ -2,6 +2,7 @@
 
 import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
+import fastifyStatic from '@fastify/static';
 import type { HealthResponse } from '../../shared/types';
 import type { Db } from './db';
 import todosRoutes from './routes/todos';
@@ -21,6 +22,9 @@ export interface BuildServerOpts {
   db: Db;
   /** Pass `false` in tests to silence Pino. Pass an object to override defaults. */
   logger?: boolean | object;
+  /** Absolute path to the built client dist. Set in single-image Docker
+      deploy; unset in dev (Vite serves the client). */
+  staticRoot?: string;
 }
 
 // Read by `npm run dev` and `npm start`. Direct `node dist/...` invocations
@@ -56,6 +60,16 @@ export async function buildServer(opts: BuildServerOpts): Promise<FastifyInstanc
   // The /todos routes plugin owns its own preHandler — keeps /healthz auth-free
   // and lets unmatched paths fall through to Fastify's default 404 (AI-2).
   await app.register(todosRoutes);
+
+  // Single-image deploy: serve the built client from / and let it 404
+  // unmatched paths via Fastify's default (AI-2: no SPA fallback in v1).
+  if (opts.staticRoot) {
+    await app.register(fastifyStatic, {
+      root: opts.staticRoot,
+      prefix: '/',
+      decorateReply: false,
+    });
+  }
 
   return app;
 }

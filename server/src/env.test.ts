@@ -19,16 +19,30 @@ async function loadEnv() {
   return mod.env;
 }
 
-test('defaults: PORT=3000, DB_PATH=./data/todos.db, CORS_ORIGIN="", NODE_ENV=development', async () => {
+test('defaults: PORT=3000, DB_PATH=./data/todos.db, CORS_ORIGIN="", NODE_ENV=development, STATIC_ROOT=undefined', async () => {
   delete process.env.PORT;
   delete process.env.DB_PATH;
   delete process.env.CORS_ORIGIN;
   delete process.env.NODE_ENV;
+  delete process.env.STATIC_ROOT;
   const env = await loadEnv();
   expect(env.PORT).toBe(3000);
   expect(env.DB_PATH).toBe('./data/todos.db');
   expect(env.CORS_ORIGIN).toBe('');
   expect(env.NODE_ENV).toBe('development');
+  expect(env.STATIC_ROOT).toBeUndefined();
+});
+
+test('STATIC_ROOT picks up an absolute path when set', async () => {
+  process.env.STATIC_ROOT = '/app/client/dist';
+  const env = await loadEnv();
+  expect(env.STATIC_ROOT).toBe('/app/client/dist');
+});
+
+test('whitespace-only STATIC_ROOT is treated as unset', async () => {
+  process.env.STATIC_ROOT = '   ';
+  const env = await loadEnv();
+  expect(env.STATIC_ROOT).toBeUndefined();
 });
 
 test('rejects non-numeric PORT', async () => {
