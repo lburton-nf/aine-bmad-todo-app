@@ -74,6 +74,11 @@ The acceptance criteria for each story below are already detailed in `epics.md`.
 
 - **`HealthResponse.ok` literal type.** Story 1.3 typed `ok: true` to mirror architecture's documented success shape (`{ ok: true, version: ... }`). Story 1.4 confirmed: literal `true` stays — failures yield 503 with the default Fastify error envelope, a different type. **Resolved.**
 
+## Open questions surfaced by Story 2.2 review
+
+- **Output JSON schemas (`additionalProperties: false`)** as defense-in-depth against `user_id` ever leaking into a response body. Today the contract is enforced by `db.ts`'s SELECT projection. Adding Fastify response schemas costs ~10 lines per route and would catch a future regression at the framework layer. Worth doing in a hardening pass.
+- **`badRequest` helper duplicates the Fastify default error envelope.** If the framework's default shape ever changes, hand-rolled 400s will silently diverge from native 4xx responses. Either centralise via a small shared module or migrate to `@fastify/sensible`'s `httpErrors` API.
+
 ## Open questions surfaced by Story 2.1 review
 
 - **Duplicate `id` PRIMARY KEY error needs route-layer translation.** `db.ts:createTodo` lets `better-sqlite3`'s `SqliteError` (constraint violation) bubble. Story 2.3 (POST /todos handler) MUST `try`/`catch` and translate to 400 with the standard envelope, otherwise duplicate-id retries surface as opaque 500s.

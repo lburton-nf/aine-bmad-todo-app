@@ -4,6 +4,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import type { HealthResponse } from '../../shared/types';
 import type { Db } from './db';
+import todosRoutes from './routes/todos';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -47,6 +48,8 @@ export async function buildServer(opts: BuildServerOpts): Promise<FastifyInstanc
   app.get('/healthz', async (): Promise<HealthResponse> => {
     return { ok: true, version: VERSION };
   });
+
+  await app.register(todosRoutes);
 
   return app;
 }
