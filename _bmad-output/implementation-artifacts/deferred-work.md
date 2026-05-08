@@ -69,3 +69,7 @@ The acceptance criteria for each story below are already detailed in `epics.md`.
   - AI-2: No SPA fallback in v1; unmatched paths return 404 (Story 1.4)
   - AI-3: PATCH/DELETE on non-existent or non-owned `:id` returns 404 with same envelope (Story 2.4)
 - Test pyramid live from line zero (this session); each subsequent story adds tests at the documented tier per `test-strategy.md` → Test Files (canonical list).
+
+## Open questions surfaced by Story 1.3 review
+
+- **`HealthResponse.ok` literal type.** Story 1.3 typed `ok: true` to mirror architecture's documented success shape (`{ ok: true, version: ... }`). Story 1.4 should confirm whether a degraded-but-200 health response is a real shape — if so, widen to `boolean`; if not (failures yield 503 with the default Fastify error envelope), keep the literal.

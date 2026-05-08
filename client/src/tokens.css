@@ -1,0 +1,27 @@
+:root {
+  /* Typography — sizes paired with line-heights from UX design spec */
+  --font-title: 1.5rem; /* 24px — page title */
+  --font-title-line-height: 1.25;
+  --font-body: 1rem; /* 16px — body, inputs, error messages */
+  --font-body-line-height: 1.5;
+  --font-meta: 0.8125rem; /* 13px — secondary controls */
+  --font-meta-line-height: 1.4;
+
+  /* Colour — semantic tokens */
+  --color-surface: #ffffff;
+  --color-text: #111827;
+  --color-text-muted: #6b7280;
+  --color-accent: #2563eb;
+  --color-error-bg: #fef2f2;
+  --color-error-text: #991b1b;
+  --color-border: #e5e7eb;
+
+  /* Spacing — 8px scale */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 16px;
+  --space-4: 24px;
+  --space-5: 32px;
+  --space-6: 48px;
+  --space-8: 64px;
+}
