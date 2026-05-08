@@ -74,6 +74,11 @@ The acceptance criteria for each story below are already detailed in `epics.md`.
 
 - **`HealthResponse.ok` literal type.** Story 1.3 typed `ok: true` to mirror architecture's documented success shape (`{ ok: true, version: ... }`). Story 1.4 confirmed: literal `true` stays — failures yield 503 with the default Fastify error envelope, a different type. **Resolved.**
 
+## Open questions surfaced by Story 2.3 review
+
+- **`description.length` is UTF-16 code units, not graphemes.** A 280-emoji description (each emoji = surrogate pair length 2) is rejected at ~140 emoji. Most clients won't notice, but this is a real Unicode correctness gap. Options: switch to `[...description].length` (counts code points) or `Intl.Segmenter` (counts graphemes, slower). UX spec doesn't specify the unit; v1 accepts UTF-16 code units. Document in user-facing copy when the client lands.
+- **Extra/unknown body keys silently dropped.** A typo like `{ id, descripton: 'x' }` produces a 400 (description missing) but `{ id, description, completed: true, user_id: 'attacker' }` is accepted (extras dropped at destructuring + at the SQL projection — no security issue, but no signal to the client). Combined with Story 2.2's response-schema deferral, this points to a Fastify request schema (`additionalProperties: false`) hardening pass.
+
 ## Open questions surfaced by Story 2.2 review
 
 - **Output JSON schemas (`additionalProperties: false`)** as defense-in-depth against `user_id` ever leaking into a response body. Today the contract is enforced by `db.ts`'s SELECT projection. Adding Fastify response schemas costs ~10 lines per route and would catch a future regression at the framework layer. Worth doing in a hardening pass.
