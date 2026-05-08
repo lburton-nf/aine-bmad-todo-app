@@ -28,11 +28,195 @@
 }
 
 .app-slot {
-  /* Each slot is filled by an Epic 4 component. Spacing between regions
-     follows the UX spec's --space-4 vertical rhythm. */
   margin-bottom: var(--space-4);
 }
 
 .app-slot:last-child {
   margin-bottom: 0;
+}
+
+/* ─── TodoInput ─────────────────────────────────────────────── */
+
+.todo-input {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  color: var(--color-text);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+}
+
+.todo-input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.todo-input:focus {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+/* ─── TodoList + TodoItem ──────────────────────────────────── */
+
+.todo-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.todo-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.todo-item:last-child {
+  border-bottom: none;
+}
+
+.todo-item--pending {
+  opacity: 0.6;
+}
+
+.todo-item__checkbox {
+  /* Make the visible target large enough; underlying input stays standard. */
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+.todo-item__description {
+  flex: 1;
+  word-break: break-word;
+}
+
+.todo-item__description--done {
+  text-decoration: line-through;
+  color: var(--color-text-muted);
+}
+
+.delete-glyph {
+  /* 44x44 hit area per UX accessibility floor */
+  width: 44px;
+  height: 44px;
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  visibility: hidden;
+  border-radius: 4px;
+}
+
+.todo-item:hover .delete-glyph,
+.todo-item:focus-within .delete-glyph,
+.delete-glyph:focus {
+  visibility: visible;
+}
+
+.delete-glyph:hover,
+.delete-glyph:focus {
+  color: var(--color-error-text);
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+/* ─── State messages ───────────────────────────────────────── */
+
+.state-message {
+  margin: var(--space-2) 0;
+  font-size: var(--font-body);
+  line-height: var(--font-body-line-height);
+}
+
+.state-message--empty,
+.state-message--loading {
+  color: var(--color-text-muted);
+}
+
+.state-message--error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-error-bg);
+  color: var(--color-error-text);
+  border-radius: 4px;
+}
+
+.state-message__text {
+  flex: 1;
+}
+
+.state-message__retry,
+.state-message__dismiss {
+  background: transparent;
+  border: 1px solid var(--color-error-text);
+  color: var(--color-error-text);
+  padding: var(--space-1) var(--space-2);
+  border-radius: 4px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.state-message__dismiss {
+  border: none;
+  font-size: 20px;
+  padding: 0 var(--space-2);
+}
+
+/* ─── DeleteAllControl ─────────────────────────────────────── */
+
+.delete-all-link {
+  display: block;
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--font-meta);
+  line-height: var(--font-meta-line-height);
+  cursor: pointer;
+  padding: var(--space-1);
+}
+
+.delete-all-link:hover,
+.delete-all-link:focus {
+  color: var(--color-text);
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+
+.delete-all-confirm {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-meta);
+  line-height: var(--font-meta-line-height);
+}
+
+.delete-all-confirm__text {
+  flex: 1;
+  color: var(--color-text-muted);
+}
+
+.delete-all-confirm__erase {
+  background: transparent;
+  border: 1px solid var(--color-error-text);
+  color: var(--color-error-text);
+  padding: var(--space-1) var(--space-2);
+  border-radius: 4px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.delete-all-confirm__cancel {
+  background: transparent;
+  border: none;
+  color: var(--color-text-muted);
+  font: inherit;
+  cursor: pointer;
 }

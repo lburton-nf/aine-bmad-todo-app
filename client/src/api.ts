@@ -67,7 +67,18 @@ async function request<T>(path: string, opts: RequestOpts = {}): Promise<T> {
   }
 
   if (response.status === 204) return undefined as T;
-  return (await response.json()) as T;
+  try {
+    return (await response.json()) as T;
+  } catch {
+    // 2xx but body was not valid JSON (e.g. dev-server SPA fallback returning
+    // HTML, or a misconfigured proxy). Surface as a server-category error
+    // rather than letting a SyntaxError leak through.
+    throw new ApiError(
+      'server',
+      `Expected JSON from ${path}, got an unparseable response`,
+      response.status,
+    );
+  }
 }
 
 export function listTodos(): Promise<Todo[]> {
