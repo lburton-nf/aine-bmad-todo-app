@@ -1,3 +1,34 @@
-// Placeholder. Real bootstrap (Fastify with bodyLimit: 1024, healthcheck,
-// logger redaction) lands in story 1.4.
-console.log('server starting');
+import { buildServer } from './server';
+import { env } from './env';
+
+async function main(): Promise<void> {
+  const app = await buildServer({ corsOrigin: env.CORS_ORIGIN });
+
+  // Graceful shutdown — Docker SIGTERM, Ctrl-C SIGINT. Drain in-flight requests
+  // and close DB handles (when Story 2.1 wires them) before the process exits.
+  for (const signal of ['SIGINT', 'SIGTERM'] as const) {
+    process.once(signal, () => {
+      app.log.info({ signal }, 'shutting down');
+      void app.close().then(
+        () => process.exit(0),
+        (err: unknown) => {
+          app.log.error(err, 'error during shutdown');
+          process.exit(1);
+        },
+      );
+    });
+  }
+
+  try {
+    await app.listen({ port: env.PORT, host: '0.0.0.0' });
+  } catch (err) {
+    app.log.error(err);
+    process.exit(1);
+  }
+}
+
+main().catch((err: unknown) => {
+  // Logger may not have constructed yet; fall back to stderr.
+  console.error('Fatal during bootstrap:', err);
+  process.exit(1);
+});
