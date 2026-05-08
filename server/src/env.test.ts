@@ -19,14 +19,14 @@ async function loadEnv() {
   return mod.env;
 }
 
-test('defaults: PORT=3000, DB_PATH=/data/todos.db, CORS_ORIGIN="", NODE_ENV=development', async () => {
+test('defaults: PORT=3000, DB_PATH=./data/todos.db, CORS_ORIGIN="", NODE_ENV=development', async () => {
   delete process.env.PORT;
   delete process.env.DB_PATH;
   delete process.env.CORS_ORIGIN;
   delete process.env.NODE_ENV;
   const env = await loadEnv();
   expect(env.PORT).toBe(3000);
-  expect(env.DB_PATH).toBe('/data/todos.db');
+  expect(env.DB_PATH).toBe('./data/todos.db');
   expect(env.CORS_ORIGIN).toBe('');
   expect(env.NODE_ENV).toBe('development');
 });

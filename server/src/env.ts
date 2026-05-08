@@ -34,7 +34,7 @@ if (NODE_ENV === 'production' && CORS_ORIGIN === '') {
 
 export const env = Object.freeze({
   PORT: parsePort(process.env.PORT),
-  DB_PATH: process.env.DB_PATH ?? '/data/todos.db',
+  DB_PATH: process.env.DB_PATH ?? './data/todos.db',
   CORS_ORIGIN,
   NODE_ENV,
 });

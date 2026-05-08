@@ -1,6 +1,8 @@
 // Persistence module — the ONLY place SQL touches the todos table.
 // Every read/write/delete scopes by user_id (NFR-1).
 
+import { mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 import Database from 'better-sqlite3';
 import type { Todo, CreateTodoRequest } from '../../shared/types';
 
@@ -49,6 +51,13 @@ export interface Db {
 export function initialize(dbPath: string): Db {
   if (!dbPath) {
     throw new Error('initialize(dbPath): dbPath must be a non-empty string.');
+  }
+  // Ensure the parent directory exists. Production deploys use the container's
+  // mounted volume at /data; local dev points DB_PATH at ./data/... and
+  // expects the path to come into existence on first run. `:memory:` and
+  // bare filenames (dirname=".") are no-ops here.
+  if (dbPath !== ':memory:') {
+    mkdirSync(dirname(dbPath), { recursive: true });
   }
   const conn = new Database(dbPath);
   // Production SQLite hygiene — WAL improves concurrent-read perf;
