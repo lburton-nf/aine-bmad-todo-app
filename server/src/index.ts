@@ -1,11 +1,13 @@
 import { buildServer } from './server';
 import { env } from './env';
+import { initialize } from './db';
 
 async function main(): Promise<void> {
-  const app = await buildServer({ corsOrigin: env.CORS_ORIGIN });
+  const db = initialize(env.DB_PATH);
+  const app = await buildServer({ corsOrigin: env.CORS_ORIGIN, db });
 
-  // Graceful shutdown — Docker SIGTERM, Ctrl-C SIGINT. Drain in-flight requests
-  // and close DB handles (when Story 2.1 wires them) before the process exits.
+  // Graceful shutdown — Docker SIGTERM, Ctrl-C SIGINT. app.close() drains
+  // in-flight requests AND triggers the onClose hook that closes the db.
   for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     process.once(signal, () => {
       app.log.info({ signal }, 'shutting down');

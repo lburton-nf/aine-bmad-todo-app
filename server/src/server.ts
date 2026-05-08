@@ -3,9 +3,17 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import type { HealthResponse } from '../../shared/types';
+import type { Db } from './db';
+
+declare module 'fastify' {
+  interface FastifyInstance {
+    db: Db;
+  }
+}
 
 export interface BuildServerOpts {
   corsOrigin: string;
+  db: Db;
   /** Pass `false` in tests to silence Pino. Pass an object to override defaults. */
   logger?: boolean | object;
 }
@@ -21,6 +29,11 @@ export async function buildServer(opts: BuildServerOpts): Promise<FastifyInstanc
       // NFR-5: scrub X-User-Id from every log line.
       redact: ['req.headers["x-user-id"]'],
     },
+  });
+
+  app.decorate('db', opts.db);
+  app.addHook('onClose', async (instance) => {
+    instance.db.close();
   });
 
   await app.register(cors, {

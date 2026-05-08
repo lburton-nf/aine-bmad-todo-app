@@ -74,6 +74,12 @@ The acceptance criteria for each story below are already detailed in `epics.md`.
 
 - **`HealthResponse.ok` literal type.** Story 1.3 typed `ok: true` to mirror architecture's documented success shape (`{ ok: true, version: ... }`). Story 1.4 confirmed: literal `true` stays — failures yield 503 with the default Fastify error envelope, a different type. **Resolved.**
 
+## Open questions surfaced by Story 2.1 review
+
+- **Duplicate `id` PRIMARY KEY error needs route-layer translation.** `db.ts:createTodo` lets `better-sqlite3`'s `SqliteError` (constraint violation) bubble. Story 2.3 (POST /todos handler) MUST `try`/`catch` and translate to 400 with the standard envelope, otherwise duplicate-id retries surface as opaque 500s.
+- **`listTodosForUser` is unbounded** — no `LIMIT`, no pagination, no streaming. v1 is single-user-per-browser with low CRUD frequency, so this is acceptable. When Growth-phase multi-user lands, add a `LIMIT` parameter and cursor pagination.
+- **Pino redact rule remains defensive-only** (deferred from Story 1.4). Now that route handlers in 2.4 will log `request.userId` (post-validation), the redact path may need to widen beyond `req.headers["x-user-id"]`. Re-verify with a logging-on integration test when 2.4 lands.
+
 ## Open questions surfaced by Story 1.4 review
 
 - **NFR-5 redact rule is defensive-only under Fastify's default `req` serializer.** The configured Pino `redact: ['req.headers["x-user-id"]']` matches a path that does NOT exist in Fastify v5's default request log shape (the default `req` serializer emits only `method, url, version, host, remoteAddress, remotePort` — no `headers`). NFR-5 is satisfied today *because* X-User-Id never reaches the log at all. If a future story enriches the request logger to include headers (e.g., for debugging), the redact path MUST be re-verified to actually fire — otherwise PII leaks. Test plan for that future story: `app.inject({headers: {'X-User-Id': 'anon-test'}})`, capture log output via a destination stream, assert the captured line does not contain `'anon-test'`.

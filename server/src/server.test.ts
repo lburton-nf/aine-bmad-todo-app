@@ -1,15 +1,20 @@
 import { test, expect } from 'vitest';
 import { buildServer } from './server';
+import { initialize } from './db';
 
 async function makeApp() {
-  return buildServer({ corsOrigin: '', logger: false });
+  return buildServer({ corsOrigin: '', logger: false, db: initialize(':memory:') });
 }
 
 // Test-only echo route used to exercise bodyLimit. Fastify's body parsing
 // runs after route resolution, so we need a registered POST endpoint to
 // verify the 413 path under load.
 async function makeAppWithEcho() {
-  const app = await buildServer({ corsOrigin: '', logger: false });
+  const app = await buildServer({
+    corsOrigin: '',
+    logger: false,
+    db: initialize(':memory:'),
+  });
   app.post('/__test-echo', async (req) => req.body);
   return app;
 }
