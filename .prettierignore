@@ -7,3 +7,5 @@ _bmad-output
 docs
 package-lock.json
 data
+playwright-report
+test-results

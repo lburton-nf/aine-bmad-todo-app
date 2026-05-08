@@ -6,3 +6,9 @@ coverage/
 data/
 *.log
 .DS_Store
+
+# Playwright outputs
+playwright-report/
+test-results/
+.playwright/
+playwright/.cache/

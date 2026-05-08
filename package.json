@@ -8,12 +8,16 @@
     "test": "npm test --prefix client && npm test --prefix server",
     "test:coverage": "concurrently --group --names client,server -c cyan,magenta \"npm run test:coverage --prefix client\" \"npm run test:coverage --prefix server\"",
     "test:docker": "vitest run --config vitest.config.ts",
+    "test:e2e": "playwright test",
+    "test:e2e:install": "playwright install chromium",
     "lint": "npm run lint --prefix client && npm run lint --prefix server",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
   "type": "commonjs",
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.3",
+    "@playwright/test": "^1.59.1",
     "concurrently": "^9.2.1",
     "prettier": "^3.8.3",
     "vitest": "^4.1.5"
