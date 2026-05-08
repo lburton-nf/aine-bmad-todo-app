@@ -332,3 +332,231 @@ test('POST /todos with missing X-User-Id returns 400 (auth check runs before bod
     await app.close();
   }
 });
+
+// ───────────────────────────────────────────────────────────────────
+// PATCH /todos/:id
+// ───────────────────────────────────────────────────────────────────
+
+async function patchTodo(
+  app: Awaited<ReturnType<typeof makeApp>>,
+  userId: string,
+  id: string,
+  body: unknown,
+) {
+  return app.inject({
+    method: 'PATCH',
+    url: `/todos/${id}`,
+    headers: { 'x-user-id': userId, 'content-type': 'application/json' },
+    payload: typeof body === 'string' ? body : JSON.stringify(body),
+  });
+}
+
+test('PATCH /todos/:id flips completed and returns 200 + updated Todo', async () => {
+  const app = await makeApp((db) => {
+    db.createTodo(U1, { id: ID1, description: 'task' });
+  });
+  try {
+    const res = await patchTodo(app, U1, ID1, { completed: true });
+    expect(res.statusCode).toBe(200);
+    const body = res.json() as { id: string; completed: boolean };
+    expect(body.id).toBe(ID1);
+    expect(body.completed).toBe(true);
+  } finally {
+    await app.close();
+  }
+});
+
+test('AI-3: PATCH on cross-user :id returns 404 (no ownership leak)', async () => {
+  const app = await makeApp((db) => {
+    db.createTodo(U2, { id: ID1, description: 'u2 task' });
+  });
+  try {
+    const res = await patchTodo(app, U1, ID1, { completed: true });
+    expect(res.statusCode).toBe(404);
+    const body = res.json() as { statusCode: number; error: string; message: string };
+    expect(body.statusCode).toBe(404);
+    expect(body.error).toBe('Not Found');
+    // U2's row is untouched.
+    const u2GetRes = await app.inject({
+      method: 'GET',
+      url: '/todos',
+      headers: { 'x-user-id': U2 },
+    });
+    expect((u2GetRes.json() as Array<{ completed: boolean }>)[0].completed).toBe(false);
+  } finally {
+    await app.close();
+  }
+});
+
+test('AI-3: PATCH on non-existent :id returns 404 (same envelope as cross-user)', async () => {
+  const app = await makeApp();
+  try {
+    const res = await patchTodo(app, U1, ID1, { completed: true });
+    expect(res.statusCode).toBe(404);
+  } finally {
+    await app.close();
+  }
+});
+
+test('PATCH /todos/:id rejects bad bodies (missing/empty/wrong type/extra fields)', async () => {
+  const app = await makeApp((db) => {
+    db.createTodo(U1, { id: ID1, description: 'task' });
+  });
+  try {
+    const cases: unknown[] = [
+      {},
+      { completed: 'yes' },
+      { completed: 1 },
+      { completed: true, description: 'sneaky' },
+      [],
+      'not an object',
+    ];
+    for (const body of cases) {
+      const res = await patchTodo(app, U1, ID1, body);
+      expect(res.statusCode).toBe(400);
+    }
+  } finally {
+    await app.close();
+  }
+});
+
+test('PATCH /todos/:id with bad :id format returns 400 (before DB call)', async () => {
+  const app = await makeApp();
+  try {
+    const res = await patchTodo(app, U1, 'not-a-uuid', { completed: true });
+    expect(res.statusCode).toBe(400);
+  } finally {
+    await app.close();
+  }
+});
+
+// ───────────────────────────────────────────────────────────────────
+// DELETE /todos/:id
+// ───────────────────────────────────────────────────────────────────
+
+test('DELETE /todos/:id removes the row and returns 204', async () => {
+  const app = await makeApp((db) => {
+    db.createTodo(U1, { id: ID1, description: 'task' });
+  });
+  try {
+    const res = await app.inject({
+      method: 'DELETE',
+      url: `/todos/${ID1}`,
+      headers: { 'x-user-id': U1 },
+    });
+    expect(res.statusCode).toBe(204);
+    expect(res.body).toBe('');
+    // Row is gone.
+    const getRes = await app.inject({
+      method: 'GET',
+      url: '/todos',
+      headers: { 'x-user-id': U1 },
+    });
+    expect(getRes.json()).toEqual([]);
+  } finally {
+    await app.close();
+  }
+});
+
+test('AI-3: DELETE on cross-user :id returns 404 and leaves row intact', async () => {
+  const app = await makeApp((db) => {
+    db.createTodo(U2, { id: ID1, description: 'u2 task' });
+  });
+  try {
+    const res = await app.inject({
+      method: 'DELETE',
+      url: `/todos/${ID1}`,
+      headers: { 'x-user-id': U1 },
+    });
+    expect(res.statusCode).toBe(404);
+    const u2GetRes = await app.inject({
+      method: 'GET',
+      url: '/todos',
+      headers: { 'x-user-id': U2 },
+    });
+    expect((u2GetRes.json() as unknown[]).length).toBe(1);
+  } finally {
+    await app.close();
+  }
+});
+
+test('AI-3: DELETE on non-existent :id returns 404 (same envelope as cross-user)', async () => {
+  const app = await makeApp();
+  try {
+    const res = await app.inject({
+      method: 'DELETE',
+      url: `/todos/${ID1}`,
+      headers: { 'x-user-id': U1 },
+    });
+    expect(res.statusCode).toBe(404);
+  } finally {
+    await app.close();
+  }
+});
+
+// ───────────────────────────────────────────────────────────────────
+// DELETE /todos (bulk delete-mine)
+// ───────────────────────────────────────────────────────────────────
+
+test("DELETE /todos clears the caller's rows and returns 204", async () => {
+  const app = await makeApp((db) => {
+    db.createTodo(U1, { id: ID1, description: 'a' });
+    db.createTodo(U1, { id: ID2, description: 'b' });
+  });
+  try {
+    const res = await app.inject({
+      method: 'DELETE',
+      url: '/todos',
+      headers: { 'x-user-id': U1 },
+    });
+    expect(res.statusCode).toBe(204);
+    expect(res.body).toBe('');
+    const getRes = await app.inject({
+      method: 'GET',
+      url: '/todos',
+      headers: { 'x-user-id': U1 },
+    });
+    expect(getRes.json()).toEqual([]);
+  } finally {
+    await app.close();
+  }
+});
+
+test('DELETE /todos with no rows for caller still returns 204 (empty bulk = success)', async () => {
+  const app = await makeApp();
+  try {
+    const res = await app.inject({
+      method: 'DELETE',
+      url: '/todos',
+      headers: { 'x-user-id': U1 },
+    });
+    expect(res.statusCode).toBe(204);
+  } finally {
+    await app.close();
+  }
+});
+
+test("DELETE /todos preserves OTHER users' rows (cross-user isolation)", async () => {
+  const app = await makeApp((db) => {
+    db.createTodo(U1, { id: ID1, description: 'u1-a' });
+    db.createTodo(U1, { id: ID2, description: 'u1-b' });
+    db.createTodo(U2, { id: ID3, description: 'u2-survives' });
+  });
+  try {
+    const delRes = await app.inject({
+      method: 'DELETE',
+      url: '/todos',
+      headers: { 'x-user-id': U1 },
+    });
+    expect(delRes.statusCode).toBe(204);
+    const u2GetRes = await app.inject({
+      method: 'GET',
+      url: '/todos',
+      headers: { 'x-user-id': U2 },
+    });
+    const u2Rows = u2GetRes.json() as Array<{ description: string }>;
+    expect(u2Rows.map((r) => r.description)).toEqual(['u2-survives']);
+  } finally {
+    await app.close();
+  }
+});

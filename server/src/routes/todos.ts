@@ -2,7 +2,6 @@ import type { FastifyPluginAsync, FastifyReply } from 'fastify';
 import type { CreateTodoRequest } from '../../../shared/types';
 
 // Architecture invariant: X-User-Id matches /^anon-[0-9a-f-]{36}$/ exactly.
-// Story 2.4 will hoist this check into a global preHandler hook.
 const USER_ID_REGEX = /^anon-[0-9a-f-]{36}$/;
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const DESCRIPTION_MAX = 280;
@@ -11,23 +10,8 @@ function badRequest(reply: FastifyReply, message: string): FastifyReply {
   return reply.code(400).send({ statusCode: 400, error: 'Bad Request', message });
 }
 
-function extractUserId(headerValue: string | string[] | undefined):
-  | {
-      ok: true;
-      value: string;
-    }
-  | {
-      ok: false;
-      message: string;
-    } {
-  if (Array.isArray(headerValue)) {
-    return { ok: false, message: 'X-User-Id header sent multiple times' };
-  }
-  const userId = typeof headerValue === 'string' ? headerValue : '';
-  if (!USER_ID_REGEX.test(userId)) {
-    return { ok: false, message: 'X-User-Id header missing or malformed' };
-  }
-  return { ok: true, value: userId };
+function notFound(reply: FastifyReply, message: string): FastifyReply {
+  return reply.code(404).send({ statusCode: 404, error: 'Not Found', message });
 }
 
 type CreateValidation = { ok: true; value: CreateTodoRequest } | { ok: false; message: string };
@@ -60,6 +44,26 @@ function validateCreateBody(body: unknown): CreateValidation {
   return { ok: true, value: { id, description } };
 }
 
+type PatchValidation = { ok: true; value: { completed: boolean } } | { ok: false; message: string };
+
+function validatePatchBody(body: unknown): PatchValidation {
+  if (body === null || body === undefined || typeof body !== 'object' || Array.isArray(body)) {
+    return { ok: false, message: 'Request body must be a JSON object' };
+  }
+  const obj = body as Record<string, unknown>;
+  if (typeof obj.completed !== 'boolean') {
+    return { ok: false, message: 'completed must be a boolean' };
+  }
+  // PATCH only mutates `completed`. Reject extras to surface client typos
+  // (e.g. `description: 'x'`) instead of silently dropping them.
+  for (const key of Object.keys(obj)) {
+    if (key !== 'completed') {
+      return { ok: false, message: `unexpected field: ${key}` };
+    }
+  }
+  return { ok: true, value: { completed: obj.completed } };
+}
+
 function isPrimaryKeyViolation(err: unknown): boolean {
   return (
     typeof err === 'object' &&
@@ -70,21 +74,39 @@ function isPrimaryKeyViolation(err: unknown): boolean {
 }
 
 const todosRoutes: FastifyPluginAsync = async (app) => {
-  app.get('/todos', async (request, reply) => {
-    const auth = extractUserId(request.headers['x-user-id']);
-    if (!auth.ok) return badRequest(reply, auth.message);
-    return app.db.listTodosForUser(auth.value);
+  // Plugin-scoped preHandler — runs for every route registered in this plugin
+  // (the four /todos verbs), and only for those. /healthz and any other
+  // app-level routes are unaffected.
+  app.addHook('preHandler', async (request, reply) => {
+    const headerValue = request.headers['x-user-id'];
+    if (Array.isArray(headerValue)) {
+      return reply.code(400).send({
+        statusCode: 400,
+        error: 'Bad Request',
+        message: 'X-User-Id header sent multiple times',
+      });
+    }
+    const userId = typeof headerValue === 'string' ? headerValue : '';
+    if (!USER_ID_REGEX.test(userId)) {
+      return reply.code(400).send({
+        statusCode: 400,
+        error: 'Bad Request',
+        message: 'X-User-Id header missing or malformed',
+      });
+    }
+    request.userId = userId;
+  });
+
+  app.get('/todos', async (request) => {
+    return app.db.listTodosForUser(request.userId);
   });
 
   app.post('/todos', async (request, reply) => {
-    const auth = extractUserId(request.headers['x-user-id']);
-    if (!auth.ok) return badRequest(reply, auth.message);
-
     const body = validateCreateBody(request.body);
     if (!body.ok) return badRequest(reply, body.message);
 
     try {
-      const todo = app.db.createTodo(auth.value, body.value);
+      const todo = app.db.createTodo(request.userId, body.value);
       return reply.code(201).send(todo);
     } catch (err) {
       if (isPrimaryKeyViolation(err)) {
@@ -92,6 +114,34 @@ const todosRoutes: FastifyPluginAsync = async (app) => {
       }
       throw err;
     }
+  });
+
+  app.patch('/todos/:id', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    if (!UUID_REGEX.test(id)) {
+      return badRequest(reply, 'id must be a lowercase canonical UUID string');
+    }
+    const body = validatePatchBody(request.body);
+    if (!body.ok) return badRequest(reply, body.message);
+
+    const updated = app.db.updateCompleted(request.userId, id, body.value.completed);
+    if (updated === null) return notFound(reply, 'Todo not found');
+    return reply.code(200).send(updated);
+  });
+
+  app.delete('/todos/:id', async (request, reply) => {
+    const { id } = request.params as { id: string };
+    if (!UUID_REGEX.test(id)) {
+      return badRequest(reply, 'id must be a lowercase canonical UUID string');
+    }
+    const removed = app.db.deleteTodo(request.userId, id);
+    if (!removed) return notFound(reply, 'Todo not found');
+    return reply.code(204).send();
+  });
+
+  app.delete('/todos', async (request, reply) => {
+    app.db.deleteAllForUser(request.userId);
+    return reply.code(204).send();
   });
 };
 

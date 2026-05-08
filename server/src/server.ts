@@ -10,6 +10,10 @@ declare module 'fastify' {
   interface FastifyInstance {
     db: Db;
   }
+  interface FastifyRequest {
+    /** Set by the todos-plugin preHandler hook on every /todos route. */
+    userId: string;
+  }
 }
 
 export interface BuildServerOpts {
@@ -49,6 +53,8 @@ export async function buildServer(opts: BuildServerOpts): Promise<FastifyInstanc
     return { ok: true, version: VERSION };
   });
 
+  // The /todos routes plugin owns its own preHandler — keeps /healthz auth-free
+  // and lets unmatched paths fall through to Fastify's default 404 (AI-2).
   await app.register(todosRoutes);
 
   return app;
