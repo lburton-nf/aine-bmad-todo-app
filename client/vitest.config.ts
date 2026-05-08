@@ -6,5 +6,23 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     include: ['src/**/*.{test,smoke.test}.{ts,tsx}'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html'],
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: [
+        'src/**/*.{test,smoke.test}.{ts,tsx}',
+        // Entry point — calls `createRoot().render(<App/>)`; nothing testable in isolation.
+        'src/main.tsx',
+        'src/vite-env.d.ts',
+        'src/assets/**',
+      ],
+      thresholds: {
+        lines: 80,
+        branches: 80,
+        functions: 80,
+        statements: 80,
+      },
+    },
   },
 });
