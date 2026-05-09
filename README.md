@@ -178,10 +178,11 @@ items remain by-design.
 ## QA / Test report
 
 Full QA breakdown — pyramid layers, per-layer counts, coverage actuals,
-tooling, reproduction commands, known gaps: [TEST_REPORT.md](TEST_REPORT.md).
-148 automated tests + 22 pen probes; 80% coverage threshold enforced on
-both runtimes, server actuals 95.7 / 91.6 / 100 / 95.5, client actuals
-89.8 / 81.3 / 92.9 / 92.1.
+tooling, reproduction commands, known gaps, and a **requirements
+traceability matrix** mapping every PRD FR (1-27) and NFR (1-12) to its
+test files: [TEST_REPORT.md](TEST_REPORT.md). 150 automated tests + 22
+pen probes; 80% coverage threshold enforced on both runtimes, server
+actuals 95.7 / 91.6 / 100 / 95.5, client actuals 89.8 / 81.3 / 92.9 / 92.1.
 
 ## Repository layout
 

@@ -5,7 +5,7 @@
 **Target:** current `main` (post-`L1+L2` fix at commit `b243532`).
 **Runtime under test:** Node 20 (matches the Docker base image), built and run on macOS arm64 host via OrbStack.
 
-> **TL;DR.** **148 automated tests pass; 0 fail; 0 skipped; 0 flaky.** Lint, format, typecheck, two production builds, six runtimes worth of `npm audit`, four CRUD-route p95 latency benchmarks, and a 22-probe security pen test all clean. Coverage exceeds the 80% line / branch / function / statement threshold on both runtimes (server 95.7 / 91.6 / 100 / 95.5; client 89.8 / 81.3 / 92.9 / 92.1). Two of the four critical attack surfaces (XSS, CORS) are now actively exercised by both unit tests and a real-browser probe, not just asserted by inspection. Cross-user isolation has triple coverage (db.ts unit tests, routes/todos.ts integration tests, AI-3 unification). Below: per-layer breakdown, coverage actuals, reproduction commands, and known gaps.
+> **TL;DR.** **150 automated tests pass; 0 fail; 0 skipped; 0 flaky.** Lint, format, typecheck, two production builds, six runtimes worth of `npm audit`, four CRUD-route p95 latency benchmarks, and a 22-probe security pen test all clean. Coverage exceeds the 80% line / branch / function / statement threshold on both runtimes (server 95.7 / 91.6 / 100 / 95.5; client 89.8 / 81.3 / 92.9 / 92.1). The PRD's 27 functional requirements and 12 non-functional requirements are mapped to specific test files in the **Requirements traceability** section below — every actionable requirement has at least one automated test; explicit non-requirements (NFR-10, NFR-11, NFR-12) are flagged as such, not as gaps.
 
 ---
 
@@ -13,7 +13,7 @@
 
 ```
         ╱ Production smoke (Playwright + axe) ─── 6 tests against the built Docker artifact
-       ╱  Dev e2e (Playwright + axe) ───────────── 14 tests against Vite + Fastify dev stack
+       ╱  Dev e2e (Playwright + axe) ───────────── 16 tests against Vite + Fastify dev stack
       ╱   Docker integration (Vitest) ──────────── 1 test against a real container
      ╱    Perf benchmark (Vitest + inject) ─────── 4 routes × 100 iterations
     ╱     Server integration (Vitest + inject) ── 35 tests against Fastify in-process
@@ -142,10 +142,11 @@ The lower client branch coverage is concentrated in `App.tsx` (80.3% statement, 
 | `todo.spec.ts`          | 8     | empty state on first load, type-Enter creates + clears + refocuses, checkbox toggles + strike-through, label-click toggles, single delete, newest-first ordering with 50 ms wait, bulk Erase, Cancel collapses |
 | `rollback.spec.ts`      | 3     | NFR-2 optimistic rollback for POST / PATCH / DELETE — failing response delayed 500 ms so Playwright can observe the optimistic frame before the rollback fires                                                 |
 | `accessibility.spec.ts` | 3     | axe-core (`wcag2a`+`wcag2aa`+`wcag21a`+`wcag21aa`, blocking impacts = `critical`+`serious`) on empty / populated / error states; rejects on any blocking violation with a per-violation summary                |
+| `requirements.spec.ts`  | 2     | FR22-24 keyboard navigation (Tab through input → checkbox → delete → erase, Space activates, Escape collapses, visible focus outline) + NFR-3 320 px viewport (no horizontal scroll, key elements in viewport) |
 
 **Browser matrix:** Chromium by default. Set `E2E_ALL_BROWSERS=1` to run Chromium + Firefox + WebKit (CI does this; local dev stays Chromium-only via `npm run test:e2e:install`. The `:full` install variant adds Firefox + WebKit).
 
-**Result:** 14 tests, ~6.8 s wall time on Chromium.
+**Result:** 16 tests, ~7.0 s wall time on Chromium.
 
 **Reproduce:** `npm run test:e2e` (Chromium only) or `E2E_ALL_BROWSERS=1 npm run test:e2e` (all three browsers).
 
@@ -188,6 +189,73 @@ The lower client branch coverage is concentrated in `App.tsx` (80.3% statement, 
 
 ---
 
+## Requirements traceability
+
+PRD's 27 functional + 12 non-functional requirements mapped to where each is verified. Status legend: ✅ automated (≥ 1 test), 🟡 partial (some automated coverage but a slice is manual or by-inspection), 🟢 by-inspection (no test, verified by reading the code or by static-analysis tools), ⚪️ acknowledged-non-requirement (PRD explicitly defers).
+
+### Functional requirements
+
+| ID       | Summary                                                               | Status | Verified by                                                                                                                                                                                                          |
+| -------- | --------------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **FR1**  | Create new todo, ≤ 280 chars                                          | ✅     | server: `routes/todos.test.ts` (boundary tests at 280 / 281, grapheme tests, empty/whitespace) · client: `components.test.tsx` (`TodoInput` `maxLength={280}`) · e2e: `todo.spec.ts` (typing + Enter)                |
+| **FR2**  | Reverse-chronological order (newest first)                            | ✅     | server: `db.test.ts` (composite index ordering) + `routes/todos.test.ts` (HTTP round-trip ordering) · e2e: `todo.spec.ts` (`'newest-first ordering'`)                                                                |
+| **FR3**  | View list of todos                                                    | ✅     | client: `api.test.ts` (`listTodos`) + `components.test.tsx` (TodoList) · e2e: every populated test                                                                                                                   |
+| **FR4**  | Mark complete                                                         | ✅     | server: `routes/todos.test.ts` (PATCH happy path) · client: `reducer.test.ts` (`OPTIMISTIC_TOGGLE`+`CONFIRM_TOGGLE`) + `components.test.tsx` · e2e: `todo.spec.ts` (`'clicking the checkbox toggles'`)               |
+| **FR5**  | Toggle back to incomplete                                             | ✅     | same as FR4 — toggle is idempotent both ways; `perf.test.ts` PATCH alternates `i % 2` to exercise both directions                                                                                                    |
+| **FR6**  | Delete with single action, no confirmation                            | ✅     | server: `routes/todos.test.ts` (DELETE happy path) · client: `reducer.test.ts` + `components.test.tsx` · e2e: `todo.spec.ts` (`'deleting a single todo'`)                                                            |
+| **FR7**  | Stores description, created_at, completion                            | ✅     | server: `db.test.ts` (`createTodo` returns full Todo with `created_at ≈ now`, `completed: false`) + schema with CHECK constraint on `completed`                                                                      |
+| **FR8**  | Anonymous persistent identifier in browser                            | ✅     | client: `identity.test.ts` (mints, persists in localStorage, returns same value across calls)                                                                                                                        |
+| **FR9**  | Server error on missing/malformed id → client treats as reset         | ✅     | client: `api.test.ts` 3 tests (happy retry, infinite-loop guard, unrelated-400 specificity)                                                                                                                          |
+| **FR10** | Every todo scoped by user_id; reads/writes/deletes scoped accordingly | ✅     | server: `db.test.ts` (every fn signature takes userId) + `routes/todos.test.ts` (HTTP isolation) · pen probe **P3/P4**                                                                                               |
+| **FR11** | Persist across browser refresh                                        | ✅     | production smoke: `smoke.docker.spec.ts` (`'data persists across page reload'`)                                                                                                                                      |
+| **FR12** | Persist across server container restart                               | ✅     | docker integration: `tests/docker.test.ts` (POST → `docker rm` → `docker run` → GET asserts row present)                                                                                                             |
+| **FR13** | Cross-user isolation                                                  | ✅     | server: `db.test.ts` + `routes/todos.test.ts` (multiple cross-user assertions, AI-3 unification on PATCH/DELETE/POST-duplicate-id) · pen probes **P3/P4**                                                            |
+| **FR14** | Empty-state indication                                                | ✅     | client: `components.test.tsx` (EmptyState) + `App.test.tsx` (`'shows EmptyState when load returns []'`) · e2e: `todo.spec.ts` (`'shows the empty state on first load'`)                                              |
+| **FR15** | Loading-state during initial fetch                                    | ✅     | client: `components.test.tsx` (LoadingState) + `reducer.test.ts` (`LOAD_REQUEST` sets `loading: true`)                                                                                                               |
+| **FR16** | Error-state on API failure, visually distinct, recoverable            | ✅     | client: `components.test.tsx` (ErrorState with retry/dismiss) + `App.test.tsx` (`'shows ErrorState when load fails'` + `'Retry after a failed load reloads'`) · e2e: `accessibility.spec.ts` (error-state axe-clean) |
+| **FR17** | Optimistic UI — mutation reflected immediately                        | ✅     | client: `reducer.test.ts` (every `OPTIMISTIC_*` action) + `App.test.tsx` (handlers fire HTTP) · e2e: `rollback.spec.ts` (3 specs assert optimistic frame visible before rollback)                                    |
+| **FR18** | Optimistic rollback on server failure (4xx/5xx, network, timeout)     | ✅     | client: `reducer.test.ts` (`ROLLBACK_*` actions) · e2e: `rollback.spec.ts` 3 tests; api.test.ts 5 error-category tests                                                                                               |
+| **FR19** | Completed todos visually distinct                                     | ✅     | client: `components.test.tsx` (`'renders completed style'`) · e2e: `todo.spec.ts` asserts `.todo-item__description--done` class                                                                                      |
+| **FR20** | Delete-all without authenticating                                     | ✅     | server: `routes/todos.test.ts` (3 bulk-DELETE tests including cross-user preservation) · e2e: `todo.spec.ts` (`'Erase my data → Erase clears'`)                                                                      |
+| **FR21** | "Delete all" reachable from UI (not API-only)                         | ✅     | client: `components.test.tsx` (DeleteAllControl) · e2e: `todo.spec.ts` Erase + Cancel paths                                                                                                                          |
+| **FR22** | Every interactive element keyboard-reachable                          | ✅     | e2e: `requirements.spec.ts` (Tab through input → checkbox → delete → erase)                                                                                                                                          |
+| **FR23** | Every action triggerable by Enter or Space                            | ✅     | client: `components.test.tsx` (TodoInput Enter) · e2e: `requirements.spec.ts` (Space activates Erase, Escape collapses)                                                                                              |
+| **FR24** | Visible focus indicator on every focusable element                    | ✅     | e2e: `requirements.spec.ts` (asserts `getComputedStyle(input).outlineWidth !== '0px'` on focus); accessibility.spec.ts axe-checks                                                                                    |
+| **FR25** | Reject empty / whitespace-only / > 280 char descriptions              | ✅     | server: `routes/todos.test.ts` (boundary tests, grapheme tests)                                                                                                                                                      |
+| **FR26** | Reject payloads > 1 KB                                                | ✅     | server: `server.test.ts` (`'2KB JSON body returns 413'`) · pen probe **P5**                                                                                                                                          |
+| **FR27** | Reject malformed user identifier                                      | ✅     | server: `routes/todos.test.ts` (5 malformed cases including no-dashes, multiple headers, oversized) · pen probes **P12/P13/P14**                                                                                     |
+
+### Non-functional requirements
+
+| ID         | Summary                                                                                                                          | Status | Verified by                                                                                                                                                                                                                                                |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **NFR-1**  | Architectural openness (user_id seam, env-var config, no hardcoded base URLs, no anon- branching)                                | 🟢     | by-inspection: every persistence fn takes userId; `env.ts` is the single env surface; `import.meta.env.VITE_API_BASE_URL` lives only in `client/src/api.ts:8`; the `anon-` prefix appears only in identity files                                           |
+| **NFR-2**  | Optimistic UI contract — every mutation reverts on rejection, error surfaces in error state                                      | ✅     | unit: `reducer.test.ts` rollback transitions · integration: `App.test.tsx` mutation flows · e2e: `rollback.spec.ts` 3 tests with 500 ms-delayed failure                                                                                                    |
+| **NFR-3**  | Polish ceiling — empty/loading/error states, completion distinction, responsive 320 px+, semantic HTML, instant feel             | ✅     | states: covered by FR14-FR16-FR19 above · 320 px: `requirements.spec.ts` (`'NFR-3: layout works at 320 px viewport'`) · semantic HTML: `accessibility.spec.ts` axe `wcag2a/aa` · instant feel: NFR-2 + NFR-4                                               |
+| **NFR-4**  | Server p95 < 100 ms over ≥ 100 reqs                                                                                              | ✅     | `perf.test.ts` (4 routes × 10 warmup + 100 measured iterations; budget asserted; observed ~0.04-0.12 ms in-process)                                                                                                                                        |
+| **NFR-5**  | Security & data hygiene (cross-user isolation, opaque-ID validation, no secrets in image, log redaction, server-side validation) | ✅     | `SECURITY_REVIEW.md` 22 pen probes + 64 server tests; cross-user isolation triple-covered (FR13); image-secret scan (probe P17 — clean); Pino redact rule + defensive-only-today justification                                                             |
+| **NFR-6**  | Reliability & durability — refresh + container-restart persistence + healthcheck                                                 | ✅     | refresh: `smoke.docker.spec.ts` reload test · container-restart: `tests/docker.test.ts` · `/healthz`: `server.test.ts` (`'GET /healthz returns 200 with HealthResponse shape'`)                                                                            |
+| **NFR-7**  | Accessibility — keyboard floor + semantic HTML                                                                                   | ✅     | `requirements.spec.ts` (Tab + Space + focus indicator) + `accessibility.spec.ts` (axe `wcag2a/aa/21a/21aa` on empty/populated/error states; 0 blocking violations)                                                                                         |
+| **NFR-8**  | Browser matrix — last 2 stable Chrome / Firefox / Safari / Edge                                                                  | 🟡     | Playwright config has `chromium` + `firefox` + `webkit` projects gated behind `E2E_ALL_BROWSERS=1`; CI sets the env var so all 3 run on every PR; Edge uses Chromium engine, so Chromium coverage stands in. Local dev defaults to Chromium-only for speed |
+| **NFR-9**  | Maintainability & code quality — strict TS-aware ESLint + Prettier, README quickstart                                            | ✅     | `npm run lint` (`recommendedTypeChecked` with `projectService`, 0 errors / 0 warnings) · `npm run format:check` clean · README quickstart verified by `docker:up` walkthrough                                                                              |
+| **NFR-10** | Scalability                                                                                                                      | ⚪️     | Explicit non-requirement per PRD: out-of-scope for v1 (single-user-per-browser, no concurrent-request capacity testing, no horizontal scaling)                                                                                                             |
+| **NFR-11** | Rate limiting & abuse protection                                                                                                 | ⚪️     | Explicit non-requirement per PRD: acknowledged v1 gap (no auth, no monetisation, single-user-per-browser)                                                                                                                                                  |
+| **NFR-12** | Integrations — none                                                                                                              | ⚪️     | Explicit non-requirement per PRD: no public API, no webhooks, no SDKs                                                                                                                                                                                      |
+
+### Status summary
+
+| Layer                                                                 | Count                                                                                                                               |
+| --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| ✅ Automated (≥ 1 specific test)                                      | 28 of 39 (FR1-FR27 + NFR-2/3/4/5/6/7/9) — every functional + every actionable non-functional                                        |
+| 🟡 Partial (automated where it counts, gated by env or partly visual) | 1 of 39 (NFR-8 browser matrix — auto in CI, default-chromium locally)                                                               |
+| 🟢 By-inspection / static-analysis                                    | 1 of 39 (NFR-1 architectural openness — invariants enforced by code structure + lint, not directly testable as a runtime assertion) |
+| ⚪️ Explicit non-requirements                                          | 3 of 39 (NFR-10/11/12)                                                                                                              |
+| ❌ Unmet                                                              | **0**                                                                                                                               |
+
+The PRD's "Measurable Outcomes" checklist (Success Criteria → Measurable Outcomes) is satisfied: all 8 demo steps have automated coverage (table at the top of `README.md`'s "How the user-acceptance demo steps are covered"); all three UI states tested; lint and Prettier zero-errors; optimistic-UI rollback proven by 3 e2e tests + reducer unit tests; performance asserted at p95 budget; keyboard accessibility automated; input validation covered at every boundary; hygiene proven by pen test; quickstart verified.
+
+---
+
 ## Total automated tests at a glance
 
 | Layer                                   | Count   | Wall time (this machine)               |
@@ -196,11 +264,11 @@ The lower client branch coverage is concentrated in `App.tsx` (80.3% statement, 
 | Server unit + integration               | 60      | ~250 ms                                |
 | Server perf                             | 4       | ~110 ms                                |
 | Docker integration (volume persistence) | 1       | ~1.2 s                                 |
-| Dev e2e (Playwright + axe)              | 14      | ~6.8 s                                 |
+| Dev e2e (Playwright + axe)              | 16      | ~7.0 s                                 |
 | Production smoke (Playwright + axe)     | 6       | ~1.3 s                                 |
-| **Total automated**                     | **148** | **~10.2 s + ~5 s container lifecycle** |
+| **Total automated**                     | **150** | **~10.4 s + ~5 s container lifecycle** |
 | + Pen probes (manual)                   | 22      | not measured                           |
-| **Total verification points**           | **170** |                                        |
+| **Total verification points**           | **172** |                                        |
 
 ---
 
