@@ -9,6 +9,17 @@
 
 ---
 
+## Status (updated post-review)
+
+- ✅ **M1 fixed** — `e2e/rollback.spec.ts` adds three NFR-2 rollback tests (POST/PATCH/DELETE), one per mutation, with a 500 ms response delay so the optimistic frame is observable.
+- ✅ **M2 fixed** — `client/src/api.ts` now resets identity and retries once on `400` with an `X-User-Id` complaint; bounded by a `retried` flag. Three new tests in `client/src/api.test.ts`.
+- ✅ **M3 fixed** — both eslint configs upgraded to `recommendedTypeChecked` with `projectService: true`; server tsconfigs split (`tsconfig.json` for type-check / lint, new `tsconfig.build.json` for `tsc` emit). Sync Fastify handlers de-asynced; redundant `(err as ...).code` cast dropped.
+- ➕ **New: production smoke suite** — `playwright.docker.config.ts` + `e2e/smoke.docker.spec.ts` + `scripts/test-e2e-docker.sh`. Six tests run against the actual Docker artifact via `npm run test:e2e:docker`. Closes the static-serve / same-origin / production-bundle / AI-2-under-`@fastify/static` gap that the dev e2e never exercised, and incidentally covers the FR11 part of **Mo12**.
+
+Open: M4 (touch targets / hover-only delete), M5 (CI workflow), M6 (Firefox + WebKit Playwright projects), all Moderate / Minor items.
+
+---
+
 ## Severity legend
 
 - **Major** — load-bearing claim from PRD/architecture is unmet, or a real user-facing bug. Should fix before pitching as portfolio.
@@ -20,7 +31,7 @@
 
 ## Major
 
-### M1. NFR-2 (Optimistic UI rollback) is not automatically tested anywhere
+### M1. ✅ FIXED — NFR-2 (Optimistic UI rollback) is not automatically tested anywhere
 
 PRD calls this the _flagship_ differentiator: Journey 2 is built around it; Technical Success and the Cross-cutting NFR both elevate it; the Test Strategy presumably required it. The reducer's transitions are unit-tested in `client/src/reducer.test.ts`, but **no test exercises the full create/toggle/delete → server-rejects → rollback path** through either:
 
@@ -31,7 +42,7 @@ PRD calls this the _flagship_ differentiator: Journey 2 is built around it; Tech
 
 **Fix:** add three Playwright tests (one per mutation) that abort the network call and assert the optimistic row reverts + an alert appears. ~30 LOC each. The accessibility spec already shows the route-abort pattern at `e2e/accessibility.spec.ts:46`.
 
-### M2. FR9 client identity-reset is dead code
+### M2. ✅ FIXED — FR9 client identity-reset is dead code
 
 PRD FR9: _"When the server receives a request with no identifier, it responds with an error in the application's standard error shape; **the client treats this as a reset and generates a fresh identifier.**"_
 
@@ -41,7 +52,7 @@ PRD FR9: _"When the server receives a request with no identifier, it responds wi
 
 **Fix:** in `client/src/api.ts:67`, before throwing, detect `response.status === 400 && message.includes('X-User-Id')` (or use a typed error code from the server) and call `identity.reset()` + retry once. Keep the retry single-shot so a misbehaving server doesn't loop.
 
-### M3. ESLint config is "recommended", not "recommended-type-checked" — NFR-9 partially unmet
+### M3. ✅ FIXED — ESLint config is "recommended", not "recommended-type-checked" — NFR-9 partially unmet
 
 PRD NFR-9 / Technical Success → Code quality: _"ESLint extends a recognized TypeScript-aware **strict** configuration (e.g., `@typescript-eslint/recommended-type-checked` or equivalent)."_
 
@@ -229,11 +240,11 @@ Multi-arch Docker builds need `--platform=linux/amd64` (or `arm64`) explicit if 
 
 ## Suggested fix order (by ROI)
 
-1. **M2** + **Mo7** + **Mo9** + **Mi9** — coalesce; ~30 lines, fixes a PRD requirement and three correctness bugs in one pass.
-2. **M1** — three Playwright tests for optimistic rollback; ~90 lines. Closes the biggest credibility gap.
-3. **M3** — flip eslint to `recommendedTypeChecked`, fix the `void` patterns it surfaces. Probably 2 hours of cleanup.
+1. ~~**M2** + **Mo7** + **Mo9** + **Mi9**~~ — M2 done; Mo7/Mo9/Mi9 (description trim/length) still open and still coalesce into one ~10-line pass.
+2. ~~**M1**~~ — done.
+3. ~~**M3**~~ — done.
 4. **M4** — single-tap toggle (wrap in `<label>`) + un-hide delete button. ~10 lines + visual polish. Big a11y/mobile win.
-5. **M5** — single CI workflow file. ~60 lines. Table-stakes for portfolio.
+5. **M5** — single CI workflow file. ~60 lines. Table-stakes for portfolio. Now even more leverage — `npm run test:e2e:docker` is ready to wire up.
 6. **Mo1** + **Mo2** + **Mo3** — doc cleanup. ~1 hour.
 7. **M6** — Firefox + WebKit projects in playwright config. ~6 lines.
 8. The rest in any order.
