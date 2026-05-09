@@ -1,8 +1,12 @@
 import type { FastifyPluginAsync, FastifyReply } from 'fastify';
 import type { CreateTodoRequest } from '../../../shared/types';
 
-// Architecture invariant: X-User-Id matches /^anon-[0-9a-f-]{36}$/ exactly.
-const USER_ID_REGEX = /^anon-[0-9a-f-]{36}$/;
+// X-User-Id is `anon-<canonical UUID>` — same 8-4-4-4-12 hex shape that
+// crypto.randomUUID() emits, locked here so a tampered localStorage value
+// (e.g. 36 hex chars without dashes) is rejected the same way the body
+// validators reject malformed todo ids. Architecture's looser
+// /^anon-[0-9a-f-]{36}$/ was tightened here per REVIEW_1 Mo4.
+const USER_ID_REGEX = /^anon-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const DESCRIPTION_MAX = 280;
 

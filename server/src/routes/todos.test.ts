@@ -100,6 +100,10 @@ test('GET /todos with malformed X-User-Id returns 400', async () => {
       'anon-abc',
       'anon-XX111111-1111-1111-1111-111111111111',
       'anon-11111111-1111-1111-1111-1111111111111', // 37 chars after prefix
+      // Mo4: 36 hex chars but no dashes — the old loose regex
+      // /^anon-[0-9a-f-]{36}$/ accepted this; the canonical 8-4-4-4-12
+      // shape rejects it.
+      'anon-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
     ];
     for (const bad of malformed) {
       const res = await app.inject({

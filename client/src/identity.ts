@@ -2,7 +2,8 @@
 // caller's `anon-${uuid}` identifier. Single source of truth for X-User-Id.
 
 const STORAGE_KEY = 'todo.userId';
-const USER_ID_REGEX = /^anon-[0-9a-f-]{36}$/;
+// Canonical 8-4-4-4-12 UUID hex shape — same regex the server enforces.
+const USER_ID_REGEX = /^anon-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 function mint(): string {
   return `anon-${crypto.randomUUID()}`;
