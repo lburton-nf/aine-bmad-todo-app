@@ -26,16 +26,22 @@ function notFound(reply: FastifyReply, message: string): FastifyReply {
   return reply.code(404).send({ statusCode: 404, error: 'Not Found', message });
 }
 
+// Arrays satisfy `typeof === 'object'`, so we exclude them explicitly — callers
+// get the accurate "must be a JSON object" message instead of a misleading
+// downstream field-validation error.
+function asJsonObject(body: unknown): Record<string, unknown> | null {
+  if (body === null || body === undefined || typeof body !== 'object' || Array.isArray(body)) {
+    return null;
+  }
+  return body as Record<string, unknown>;
+}
+
 type CreateValidation = { ok: true; value: CreateTodoRequest } | { ok: false; message: string };
 
 function validateCreateBody(body: unknown): CreateValidation {
-  // Arrays satisfy `typeof === 'object'` — exclude them explicitly so callers
-  // get the accurate "must be a JSON object" message rather than a misleading
-  // downstream id-validation error.
-  if (body === null || body === undefined || typeof body !== 'object' || Array.isArray(body)) {
-    return { ok: false, message: 'Request body must be a JSON object' };
-  }
-  const { id, description } = body as Record<string, unknown>;
+  const obj = asJsonObject(body);
+  if (!obj) return { ok: false, message: 'Request body must be a JSON object' };
+  const { id, description } = obj;
 
   if (typeof id !== 'string' || !UUID_REGEX.test(id)) {
     return { ok: false, message: 'id must be a lowercase canonical UUID string' };
@@ -59,10 +65,8 @@ function validateCreateBody(body: unknown): CreateValidation {
 type PatchValidation = { ok: true; value: { completed: boolean } } | { ok: false; message: string };
 
 function validatePatchBody(body: unknown): PatchValidation {
-  if (body === null || body === undefined || typeof body !== 'object' || Array.isArray(body)) {
-    return { ok: false, message: 'Request body must be a JSON object' };
-  }
-  const obj = body as Record<string, unknown>;
+  const obj = asJsonObject(body);
+  if (!obj) return { ok: false, message: 'Request body must be a JSON object' };
   if (typeof obj.completed !== 'boolean') {
     return { ok: false, message: 'completed must be a boolean' };
   }
@@ -91,19 +95,11 @@ const todosRoutes: FastifyPluginAsync = (app) => {
   app.addHook('preHandler', async (request, reply) => {
     const headerValue = request.headers['x-user-id'];
     if (Array.isArray(headerValue)) {
-      return reply.code(400).send({
-        statusCode: 400,
-        error: 'Bad Request',
-        message: 'X-User-Id header sent multiple times',
-      });
+      return badRequest(reply, 'X-User-Id header sent multiple times');
     }
     const userId = typeof headerValue === 'string' ? headerValue : '';
     if (!USER_ID_REGEX.test(userId)) {
-      return reply.code(400).send({
-        statusCode: 400,
-        error: 'Bad Request',
-        message: 'X-User-Id header missing or malformed',
-      });
+      return badRequest(reply, 'X-User-Id header missing or malformed');
     }
     request.userId = userId;
   });
