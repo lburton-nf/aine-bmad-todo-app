@@ -50,6 +50,8 @@ function withPending(set: Set<string>, id: string): Set<string> {
   return next;
 }
 
+const byCreatedAtDesc = (a: Todo, b: Todo) => b.created_at - a.created_at;
+
 export function todoReducer(state: TodoState, action: Action): TodoState {
   switch (action.type) {
     case 'LOAD_REQUEST':
@@ -113,8 +115,7 @@ export function todoReducer(state: TodoState, action: Action): TodoState {
     case 'ROLLBACK_DELETE':
       return {
         ...state,
-        // Restore the row in newest-first order. created_at is its sort key.
-        todos: [...state.todos, action.todo].sort((a, b) => b.created_at - a.created_at),
+        todos: [...state.todos, action.todo].sort(byCreatedAtDesc),
         optimisticPending: withoutPending(state.optimisticPending, action.todo.id),
         error: action.reason,
       };

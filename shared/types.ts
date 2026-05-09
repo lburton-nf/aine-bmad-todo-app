@@ -4,7 +4,7 @@
 export interface Todo {
   id: string;
   description: string;
-  /** Unix epoch milliseconds. Client-minted at creation; never mutated. */
+  /** Unix epoch milliseconds. Server-minted at INSERT; never mutated. */
   created_at: number;
   completed: boolean;
 }
