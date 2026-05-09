@@ -229,8 +229,12 @@ review-tagged ("close M1, M2, M3 from REVIEW_1.md"). Long abstract prompts
 
 ### MCP server usage
 
-**None.** This project deliberately used direct library / curl / Vitest
-equivalents:
+The rubric's MCP mentions (Postman MCP, Chrome DevTools MCP, Playwright
+MCP) are **agent-side dev tools** — the AI uses them while building and
+testing the app. They aren't runtime integrations into the product.
+
+**None used.** This project deliberately picked direct library / curl /
+Vitest equivalents:
 
 - **API contracts**: Fastify's `inject()` helper (in-process integration
   tests) + curl for external pen probes — instead of Postman MCP.
