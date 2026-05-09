@@ -5,7 +5,14 @@
 **Target:** the production Docker artifact (`todo-app-3:latest`), built from the current `main`.
 **Method:** static review of the auth boundary, persistence layer, validators, headers, and Dockerfile; live pen probes against a containerised instance on `:3097`; `npm audit` across all three workspaces; React-render XSS probe via Playwright.
 
-> **TL;DR.** No exploitable vulnerabilities found. The v1 design's "no auth, anonymous identity, single-user-per-browser" stance is internally consistent and well-defended against the threats it does try to stop: cross-user data leakage, SQL injection, XSS, oversized-payload DoS, container privilege, and supply-chain. The findings list below is **2 Low + 4 Informational** — all latent or by-design, none exploitable today. Two of them (CORS allow-methods, missing browser-defence headers) would matter the moment the deploy shape changes (split-origin, embedded-iframe, behind-TLS); the rest are documented limits of v1 scope.
+> **TL;DR.** No exploitable vulnerabilities found. The v1 design's "no auth, anonymous identity, single-user-per-browser" stance is internally consistent and well-defended against the threats it does try to stop: cross-user data leakage, SQL injection, XSS, oversized-payload DoS, container privilege, and supply-chain. The findings list below is **2 Low (both fixed in commit `b243532`) + 4 Informational** — none exploitable today; the Lows have been closed proactively to harden against deploy variations.
+
+## Status (post-review fixes)
+
+- ✅ **L1 fixed** in `b243532` — `@fastify/cors` now configured with an explicit `methods: ['GET', 'HEAD', 'POST', 'PATCH', 'DELETE', 'OPTIONS']`. Verified by a new regression test in `server/src/server.test.ts` that issues a preflight and asserts both PATCH and DELETE appear in `Access-Control-Allow-Methods`. Re-run pen probe **P11** confirmed: `access-control-allow-methods: GET, HEAD, POST, PATCH, DELETE, OPTIONS`.
+- ✅ **L2 fixed** in `b243532` — `@fastify/helmet` registered with a strict CSP suited to the Vite production bundle (`default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'`). Helmet's other defaults (X-Frame-Options, X-Content-Type-Options: nosniff, Referrer-Policy, Strict-Transport-Security, X-Permitted-Cross-Domain-Policies, etc.) ride along. Verified by a new regression test asserting CSP and the load-bearing flags. The full 6-test production smoke suite still passes — CSP doesn't break the bundle.
+
+The four `I*` items remain as documented design statements rather than work to do.
 
 ---
 
@@ -164,7 +171,7 @@ Probe **P9**: `HEAD /todos` → 200 (Fastify auto-routes HEAD on registered GETs
 - **Low** — latent, would be exploitable only if the deploy shape changes (split-origin, embedded-iframe, behind-TLS) or a future code change adds the feature that the missing control would defend.
 - **Informational** — design decisions worth flagging for completeness but not vulnerabilities under v1's stated scope.
 
-### L1. CORS preflight does not advertise PATCH or DELETE — latent split-origin breakage
+### L1. ✅ FIXED — CORS preflight does not advertise PATCH or DELETE — latent split-origin breakage
 
 **Where:** `server/src/server.ts:49-55` (`@fastify/cors` registration).
 
@@ -178,7 +185,7 @@ Probe **P9**: `HEAD /todos` → 200 (Fastify auto-routes HEAD on registered GETs
 
 **Severity:** Low (no exploit; latent functional bug under deploy variation).
 
-### L2. No browser-defence response headers
+### L2. ✅ FIXED — No browser-defence response headers
 
 **Where:** every response from the server (`server/src/server.ts`).
 
@@ -272,8 +279,8 @@ await app.register(helmet, {
 
 ## Suggested fix order (by ROI)
 
-1. **L1 + L2** — bundle into one commit. Add `@fastify/helmet` and set explicit `methods` in the CORS config. ~10 lines of config plus one new dep. Closes both Low findings.
-2. **I3** — add the captured-Pino-output regression test. ~30 lines, no production change. Highest cost-effective hardening because it makes the redact rule self-checking.
+1. ~~**L1 + L2**~~ — done in `b243532`.
+2. **I3** — add the captured-Pino-output regression test. ~30 lines, no production change. Highest cost-effective remaining hardening because it makes the redact rule self-checking.
 3. The remaining `I*` items are by-design statements rather than work to do — they're recorded here so a future security review can verify the model hasn't drifted.
 
-Nothing in this review blocks the v1 portfolio piece from shipping. The application is well-defended against the threats it targets, and the gaps are either acknowledged-by-design or latent under deploy variations that v1 doesn't ship.
+Nothing in this review blocks the v1 portfolio piece from shipping. The application is well-defended against the threats it targets, and the remaining gaps are either acknowledged-by-design or — for L1 / L2 — already closed.
