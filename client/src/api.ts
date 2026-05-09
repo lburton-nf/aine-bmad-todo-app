@@ -63,10 +63,9 @@ async function request<T>(path: string, opts: RequestOpts = {}, retried = false)
     } catch {
       // Body wasn't JSON; fall back to statusText.
     }
-    // FR9: a 400 with an X-User-Id complaint means the server doesn't recognise
-    // our identifier (tampered localStorage, validation regex tightened across
-    // versions, etc.). Reset to a fresh anon-{uuid} and retry once. Bounded by
-    // `retried` so a misbehaving server can't loop us.
+    // 400 with an X-User-Id complaint means the server doesn't recognise our
+    // identifier (e.g. tampered localStorage). Reset and retry once; the
+    // `retried` flag prevents a misbehaving server from looping us.
     if (response.status === 400 && !retried && /X-User-Id/i.test(message)) {
       resetIdentity();
       return request<T>(path, opts, true);
@@ -78,9 +77,9 @@ async function request<T>(path: string, opts: RequestOpts = {}, retried = false)
   try {
     return (await response.json()) as T;
   } catch {
-    // 2xx but body was not valid JSON (e.g. dev-server SPA fallback returning
-    // HTML, or a misconfigured proxy). Surface as a server-category error
-    // rather than letting a SyntaxError leak through.
+    // 2xx with non-JSON body (dev SPA fallback HTML, misconfigured proxy):
+    // surface as a server-category ApiError instead of letting SyntaxError
+    // leak through.
     throw new ApiError(
       'server',
       `Expected JSON from ${path}, got an unparseable response`,

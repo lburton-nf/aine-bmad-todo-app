@@ -1,11 +1,7 @@
-// NFR-2 — automated proof of the optimistic-UI rollback contract.
-// For each mutation (create / toggle / delete), force the server to fail and
-// assert: (a) the optimistic state appears, (b) the rollback restores the
-// pre-mutation state, (c) the error alert is rendered.
-//
-// We delay the failing response by 500 ms so the optimistic state is observable
-// to Playwright's polling assertions. Without the delay the optimistic frame
-// can land and roll back inside a single tick.
+// Optimistic-UI rollback. For each mutation (create / toggle / delete), the
+// failing response is delayed 500 ms so Playwright can observe the
+// optimistic frame before the rollback fires — without the delay the
+// optimistic state would land and revert in a single tick.
 
 import { test, expect, type Route, type Page } from '@playwright/test';
 

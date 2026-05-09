@@ -1,10 +1,7 @@
-// Production smoke suite — runs against the built Docker container, not the
-// dev stack. Closes the gap that the dev e2e leaves: static-serve via
-// @fastify/static, same-origin CORS, the production React bundle, and the
-// AI-2 404-envelope invariant when the static plugin is registered.
-//
-// Lifecycle is owned by `scripts/test-e2e-docker.sh`; this file assumes the
-// container is healthy at the configured baseURL.
+// Production smoke against the built Docker container — exercises paths the
+// dev e2e doesn't see: @fastify/static serving, same-origin CORS, the
+// production React bundle, the 404-envelope under the static-plugin layering.
+// Lifecycle (build, run, teardown) is owned by `scripts/test-e2e-docker.sh`.
 
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';

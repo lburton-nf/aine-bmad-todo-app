@@ -10,8 +10,8 @@ async function main(): Promise<void> {
     staticRoot: env.STATIC_ROOT,
   });
 
-  // Graceful shutdown — Docker SIGTERM, Ctrl-C SIGINT. app.close() drains
-  // in-flight requests AND triggers the onClose hook that closes the db.
+  // SIGTERM (Docker) and SIGINT (Ctrl-C): app.close() drains in-flight
+  // requests and triggers onClose to close the db.
   for (const signal of ['SIGINT', 'SIGTERM'] as const) {
     process.once(signal, () => {
       app.log.info({ signal }, 'shutting down');

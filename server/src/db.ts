@@ -52,10 +52,8 @@ export function initialize(dbPath: string): Db {
   if (!dbPath) {
     throw new Error('initialize(dbPath): dbPath must be a non-empty string.');
   }
-  // Ensure the parent directory exists. Production deploys use the container's
-  // mounted volume at /data; local dev points DB_PATH at ./data/... and
-  // expects the path to come into existence on first run. `:memory:` and
-  // bare filenames (dirname=".") are no-ops here.
+  // Production: volume mounted at /data. Local dev: ./data/... materializes
+  // on first run. ':memory:' and bare filenames (dirname=".") no-op here.
   if (dbPath !== ':memory:') {
     mkdirSync(dirname(dbPath), { recursive: true });
   }

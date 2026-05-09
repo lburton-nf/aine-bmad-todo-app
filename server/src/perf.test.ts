@@ -1,17 +1,7 @@
-// NFR-4 — automated p95 latency benchmark.
-//
-// PRD says: "Server response p95 is under 100 ms for any CRUD action,
-// measured over at least 100 requests against the running Docker container."
-//
-// We run the same Fastify build via inject() in-process (no network, same
-// route handlers, same better-sqlite3, same prepared-statement cache). If
-// p95 is comfortably under 100 ms here, adding the Docker-and-loopback
-// round-trip on top gets us to ~5 ms more under conservative assumptions —
-// well within budget. The test catches NFR-4 regressions (slow query, lock
-// contention, accidental sync I/O) without needing a running container.
-//
-// Each route gets 10 warmup iterations (JIT + sqlite cache settle) followed
-// by 100 measured iterations. p95 is taken from the sorted samples.
+// p95 latency benchmark: budget 100 ms per CRUD route. Runs in-process via
+// Fastify inject() — same handlers, same SQLite, no network — so a regression
+// (slow query, lock contention, accidental sync I/O) shows up here without
+// needing the container. Each route warms 10 iterations then measures 100.
 
 import { test, expect } from 'vitest';
 import { buildServer } from './server';
