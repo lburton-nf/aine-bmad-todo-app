@@ -2,6 +2,7 @@
 
 import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
+import helmet from '@fastify/helmet';
 import fastifyStatic from '@fastify/static';
 import type { HealthResponse } from '../../shared/types';
 import type { Db } from './db';
@@ -46,11 +47,31 @@ export async function buildServer(opts: BuildServerOpts): Promise<FastifyInstanc
     return Promise.resolve();
   });
 
+  // Browser-defence headers. Vite emits external module scripts and external
+  // CSS — no inline scripts, no eval, no inline styles. The strict default
+  // CSP (`default-src 'self'`) is fine; we only relax `img-src` to allow
+  // data: URIs (favicon).
+  await app.register(helmet, {
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'"],
+        imgSrc: ["'self'", 'data:'],
+        connectSrc: ["'self'"],
+        frameAncestors: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
+      },
+    },
+  });
+
   await app.register(cors, {
     // Empty string => no CORS allow-list (same-origin / tests). @fastify/cors
     // rejects empty strings, so we coerce to `false`. Any configured value
     // is passed through verbatim.
     origin: opts.corsOrigin || false,
+    methods: ['GET', 'HEAD', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'X-User-Id'],
   });
 

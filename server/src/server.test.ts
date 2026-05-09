@@ -61,3 +61,46 @@ test('unknown path returns 404 with the default JSON envelope (no SPA fallback)'
     await app.close();
   }
 });
+
+test('responses set browser-defence headers (CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy)', async () => {
+  const app = await makeApp();
+  try {
+    const res = await app.inject({ method: 'GET', url: '/healthz' });
+    expect(res.statusCode).toBe(200);
+    const csp = res.headers['content-security-policy'];
+    expect(typeof csp).toBe('string');
+    expect(csp).toMatch(/default-src 'self'/);
+    expect(csp).toMatch(/frame-ancestors 'none'/);
+    expect(res.headers['x-content-type-options']).toBe('nosniff');
+    expect(res.headers['x-frame-options']).toMatch(/DENY|SAMEORIGIN/i);
+    expect(typeof res.headers['referrer-policy']).toBe('string');
+  } finally {
+    await app.close();
+  }
+});
+
+test('CORS preflight advertises PATCH and DELETE in Allow-Methods', async () => {
+  const app = await buildServer({
+    corsOrigin: 'http://example.test',
+    logger: false,
+    db: initialize(':memory:'),
+  });
+  try {
+    const res = await app.inject({
+      method: 'OPTIONS',
+      url: '/todos/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+      headers: {
+        origin: 'http://example.test',
+        'access-control-request-method': 'PATCH',
+        'access-control-request-headers': 'content-type, x-user-id',
+      },
+    });
+    expect(res.statusCode).toBe(204);
+    const allowMethods = res.headers['access-control-allow-methods'];
+    expect(allowMethods).toMatch(/PATCH/);
+    expect(allowMethods).toMatch(/DELETE/);
+    expect(res.headers['access-control-allow-origin']).toBe('http://example.test');
+  } finally {
+    await app.close();
+  }
+});
