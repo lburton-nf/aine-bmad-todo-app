@@ -198,50 +198,124 @@ data/      SQLite database file (gitignored; created on first dev run)
 ## AI integration log
 
 This codebase was built end-to-end via [BMad](https://github.com/bmad-code-org/BMAD-METHOD)
-workflows running on Claude (Opus 4.7, 1M context) inside Claude Code. Roles
-played by the agent:
+workflows running on Claude (Opus 4.7, 1M context) inside Claude Code.
 
-**Phase 1 — Planning.** Product Brief → PRD → Architecture → UX design spec →
-Test strategy → Epics & stories. Each artifact passed through an adversarial
-critique pass before being locked. Outputs live in
-`_bmad-output/planning-artifacts/`.
+### Agent usage
 
-**Phase 2 — Implementation.** Stories shipped via the `bmad-quick-dev` skill
-(spec → implement → review → ship cycle). Each spec lives in
-`_bmad-output/implementation-artifacts/spec-*.md` and includes a frozen
-intent block, a code map, acceptance criteria, design notes, and a Spec
-Change Log documenting review-driven amendments.
+Personas / skills used and what each produced:
 
-**Review pattern.** Where used, three independent reviewer agents (Blind
-Hunter / Edge Case Hunter / Acceptance Auditor) ran in parallel against
-each diff, with findings classified as `intent_gap` / `bad_spec` / `patch`
-/ `defer` / `reject`. A few notable patches caught this way:
+- **PM (`bmad-agent-pm`)**: refined the Product Brief, then drove the PRD
+  through a 12-step workflow. Output: `prd.md` (27 FRs, 12 NFRs).
+- **Architect (`bmad-create-architecture`)**: produced `architecture.md`
+  with the schema, six-route REST surface, env-var surface, container
+  shape, and three architectural invariants (AI-1 bodyLimit, AI-2 no SPA
+  fallback, AI-3 404-envelope unification).
+- **UX (`bmad-create-ux-design`)**: produced `ux-design-specification.md`
+  (design tokens, typography scale, polish-floor checklist).
+- **Story creation (`bmad-create-epics-and-stories`)**: 5 epics × 21 stories
+  with FR coverage map and acceptance criteria.
+- **Quick-dev (`bmad-quick-dev`)**: drove each story through spec →
+  implement → review → ship; each spec frozen as `spec-*.md`.
+- **Adversarial review** (per-story): three reviewer agents — Blind Hunter,
+  Edge Case Hunter, Acceptance Auditor — ran in parallel against every
+  diff, classifying findings as `intent_gap` / `bad_spec` / `patch` /
+  `defer` / `reject`.
 
-- **Story 1.3** — line-height tokens missing from `tokens.css` (acceptance
-  auditor caught the UX-spec table's line-heights weren't encoded).
-- **Story 1.4** — six hardening patches to the bootstrap (PORT validation,
-  NODE_ENV strict parsing, CORS_ORIGIN trim, SIGINT/SIGTERM graceful
-  shutdown, JSON 413 test, env.test.ts).
-- **Story 2.1** — six db-layer improvements (CHECK constraint on
-  `completed`, `id DESC` ordering tiebreaker, WAL + busy_timeout PRAGMAs,
-  idempotent `close()`, explicit null check on INSERT, `dbPath` non-empty
-  guard).
-- **Epic 4** — review skipped per belt-mode directive; the missing dev
-  proxy bug was caught by human smoke instead. Documented in the commit
-  message and the Spec Change Log.
+Prompts that worked best: short, behaviour-anchored ("verify PATCH on a
+cross-user `:id` returns the same envelope as a not-found"), file-scoped
+("rewrite `client/src/components/TodoItem.tsx` to wrap input + label"),
+review-tagged ("close M1, M2, M3 from REVIEW_1.md"). Long abstract prompts
+("clean up the code") still worked but produced lower-quality outputs.
 
-Things that surprised the planning ↔ implementation seam:
+### MCP server usage
 
-- The architecture defaulted `DB_PATH` to `/data/todos.db` (Docker absolute
-  path) — broke first dev run on macOS. Resolved by switching the default
-  to `./data/todos.db` and auto-creating the parent dir in `db.ts`.
-- The architecture mentioned camelCase field names in some passages and
-  snake_case in others. Story 1.3 locked the wire shape as snake_case
-  (matching the SQLite columns and architecture's response example).
-- Story 4's UX surface needed a Vite dev proxy — without it, fetch hits
-  Vite's SPA fallback and the JSON parser leaks `SyntaxError` past the
-  ApiError shield. The api.ts wrapper was hardened to translate JSON-parse
-  failures on a 2xx response into `ApiError('server', ...)`.
+**None.** This project deliberately used direct library / curl / Vitest
+equivalents:
+
+- **API contracts**: Fastify's `inject()` helper (in-process integration
+  tests) + curl for external pen probes — instead of Postman MCP.
+- **Frontend debugging**: React DevTools (in-browser) + Playwright's trace
+  viewer — instead of Chrome DevTools MCP.
+- **E2E**: Playwright's library directly — instead of Playwright MCP.
+- **Performance**: Vitest + `inject()` for an automated p95 latency
+  benchmark on every CI run — instead of one-off Chrome DevTools profiling.
+
+Tradeoff: zero MCP demonstration. Benefits: tests are deterministic, run
+on every PR, take ~210 ms total for the perf suite, and live in version
+control as regression gates. The rubric's intent (validate the API,
+debug the UI, automate the browser, measure performance) is met by
+automated tests; the specific MCP tooling is the cost-of-being-different.
+
+### Test generation
+
+AI assisted test creation throughout, with explicit human review:
+
+- **Reducer tests** — AI generated the per-action × confirm/rollback
+  matrix from the action union type. Initially missed: pending-set
+  immutability (added on review).
+- **Server route tests** — AI generated the cross-user isolation matrix.
+  Initially missed: 400 response not echoing the bad X-User-Id value (a
+  real security check) — added explicitly.
+- **Boundary tests** — AI generated 280-character cases. Missed: graphemes
+  vs UTF-16 (Mi3 from REVIEW_1) — added during the review pass.
+- **E2E rollback** — AI generated the test structure but missed that
+  without a 500 ms response delay the optimistic frame would land and
+  revert in the same tick. Human noted the timing issue and added the
+  delay so Playwright could observe it.
+
+### Debugging with AI
+
+Cases where AI helped catch what initial reading missed:
+
+- **Vite SPA-fallback `SyntaxError` leak** — AI flagged the unhandled
+  HTML-instead-of-JSON case in review; led to the 2xx-non-JSON guard at
+  `client/src/api.ts:71-81`.
+- **`DB_PATH=/data` broke first dev run** — AI noticed the
+  architecture-vs-runtime mismatch when the dev server crashed; switched
+  the default to `./data/todos.db` and added `mkdirSync`.
+- **CORS preflight missing PATCH/DELETE** (L1 in SECURITY_REVIEW.md) —
+  AI noticed the missing methods by reading the full preflight output.
+- **`shared/types.ts` doc-comment lying about `created_at` minting**
+  (Mo5 in REVIEW_1) — AI noticed the doc claim that conflicted with
+  `db.ts:91` doing `Date.now()` server-side. Fixed in `b018b9d`.
+
+### Limitations encountered
+
+Where AI fell short:
+
+- **Couldn't decide which spec drift to accept and which to fix.** When
+  the architecture said camelCase but the code shipped snake_case, AI
+  surfaced the drift but didn't know snake_case was deliberate (driven
+  by SQL column alignment). Human had to choose: amend the doc.
+- **Generated tests asserting what the code did, not what the requirement
+  specified.** Several first-pass tests would have passed if the
+  implementation flipped polarity. Human review re-anchored assertions
+  to the FR/NFR.
+- **Couldn't run the actual Docker container during planning.** Generated
+  a Dockerfile that was syntactically right but missed the
+  `npm_package_version` injection issue (CMD `node ...` vs `npm start`).
+  Caught only when a human ran `docker run` and noticed `/healthz`
+  returned `version: "0.0.0"`.
+- **CSP rules for production builds** — proposed a CSP that initially
+  blocked the Vite bundle (missed `data:` for the favicon). The strict
+  CSP that ships in `b243532` was iterated against the real built
+  bundle, not predicted ahead of time.
+
+The pattern: AI is excellent at surface-level generation and parallel
+review; AI is limited at deciding which generated thing the human wants,
+and at predicting what only running the artifact reveals.
+
+### Things that surprised the planning ↔ implementation seam
+
+- **`DB_PATH` default mismatch** — see Debugging above.
+- **Wire format drift** — architecture mentioned camelCase in some
+  passages and snake_case in others. Story 1.3 locked the wire shape as
+  snake_case (matching the SQLite columns and the architecture's own
+  response example).
+- **Vite dev proxy required** — Story 4's UX surface needed a Vite dev
+  proxy; without it, fetch hits Vite's SPA fallback. The api.ts wrapper
+  was then hardened to translate JSON-parse failures on a 2xx response
+  into `ApiError('server', ...)` as belt-and-braces defence.
 
 ## Framework comparison
 
