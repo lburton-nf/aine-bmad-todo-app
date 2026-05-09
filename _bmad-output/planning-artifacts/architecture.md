@@ -24,6 +24,23 @@ date: '2026-05-08'
 
 _This document builds collaboratively through step-by-step discovery. Sections are appended as we work through each architectural decision together._
 
+> **Implementation amendments (post-build).** Three decisions in this document
+> were superseded during the build. They are corrected inline below where they
+> appear, and the rationale is recorded in the README's "Things that surprised
+> the planning ↔ implementation seam" section:
+>
+> - **JSON wire format is `snake_case`, not `camelCase`** (Story 1.3 locked the
+>   wire shape to match the SQL columns and the architecture's own response
+>   example; the case-translation layer in `db.ts` was removed).
+> - **Identity validation and request-body validation live in
+>   `server/src/routes/todos.ts`**, not in dedicated `identity.ts` /
+>   `validation.ts` files (the regex appears once and the body validators are
+>   inline; the "single owner per concern" invariant still holds, the owner is
+>   just the routes file).
+> - **Styling is plain CSS imported by `App.tsx`** (`client/src/App.css` plus
+>   `tokens.css`), not CSS Modules. Same boring-governor outcome via a
+>   different idiom.
+
 ## Project Context Analysis
 
 ### Requirements Overview
