@@ -7,6 +7,7 @@
 
 import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { addTodo } from './helpers';
 
 const BLOCKING_IMPACTS = ['critical', 'serious'] as const;
 
@@ -35,8 +36,7 @@ test('a11y: empty state', async ({ page }) => {
 test('a11y: populated state with at least one todo', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByText('No todos yet.')).toBeVisible();
-  await page.getByPlaceholder('Add a todo…').fill('a11y check item');
-  await page.getByPlaceholder('Add a todo…').press('Enter');
+  await addTodo(page, 'a11y check item');
   await expect(page.getByText('a11y check item')).toBeVisible();
   await expectNoBlockingViolations(page, 'populated state');
 });

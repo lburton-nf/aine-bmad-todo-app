@@ -3,15 +3,10 @@
 // optimistic frame before the rollback fires — without the delay the
 // optimistic state would land and revert in a single tick.
 
-import { test, expect, type Route, type Page } from '@playwright/test';
+import { test, expect, type Route } from '@playwright/test';
+import { addTodo, freshPage } from './helpers';
 
 const FAILURE_DELAY_MS = 500;
-
-async function freshPage(page: Page) {
-  await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Todos' })).toBeVisible();
-  await expect(page.getByText('No todos yet.')).toBeVisible();
-}
 
 async function fail(route: Route) {
   await new Promise((r) => setTimeout(r, FAILURE_DELAY_MS));
@@ -31,9 +26,7 @@ test('POST rollback — optimistic create reverts on server failure', async ({ p
   });
 
   await freshPage(page);
-  const input = page.getByPlaceholder('Add a todo…');
-  await input.fill('rollback me');
-  await input.press('Enter');
+  await addTodo(page, 'rollback me');
 
   // Optimistic: row is in the list before the server has responded.
   await expect(page.getByText('rollback me')).toBeVisible();
@@ -47,8 +40,7 @@ test('PATCH rollback — optimistic toggle reverts on server failure', async ({ 
   await freshPage(page);
 
   // Create a real todo first (no mock yet).
-  await page.getByPlaceholder('Add a todo…').fill('toggle me');
-  await page.getByPlaceholder('Add a todo…').press('Enter');
+  await addTodo(page, 'toggle me');
   await expect(page.getByText('toggle me')).toBeVisible();
 
   // Now mock PATCH /todos/:id to fail. Bulk routes (`/todos`) are unaffected
@@ -74,8 +66,7 @@ test('DELETE rollback — optimistic delete restores the row on server failure',
   await freshPage(page);
 
   // Create a real todo first.
-  await page.getByPlaceholder('Add a todo…').fill('delete me');
-  await page.getByPlaceholder('Add a todo…').press('Enter');
+  await addTodo(page, 'delete me');
   await expect(page.getByText('delete me')).toBeVisible();
 
   // Mock DELETE /todos/:id to fail (bulk delete on /todos remains unaffected).

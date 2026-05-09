@@ -5,6 +5,7 @@
 
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { addTodo } from './helpers';
 
 test('healthz returns the canonical shape with the package version', async ({
   request,
@@ -46,8 +47,7 @@ test('create round-trip: POST /todos works through Fastify (no proxy in producti
 }) => {
   await page.goto('/');
   await expect(page.getByText('No todos yet.')).toBeVisible();
-  await page.getByPlaceholder('Add a todo…').fill('production smoke');
-  await page.getByPlaceholder('Add a todo…').press('Enter');
+  await addTodo(page, 'production smoke');
   await expect(page.getByText('production smoke')).toBeVisible();
   await expect(page.getByText('No todos yet.')).toHaveCount(0);
 });
@@ -55,8 +55,7 @@ test('create round-trip: POST /todos works through Fastify (no proxy in producti
 test('data persists across page reload (same anon-{uuid}, same volume)', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByText('No todos yet.')).toBeVisible();
-  await page.getByPlaceholder('Add a todo…').fill('survives reload');
-  await page.getByPlaceholder('Add a todo…').press('Enter');
+  await addTodo(page, 'survives reload');
   await expect(page.getByText('survives reload')).toBeVisible();
 
   await page.reload();
@@ -69,8 +68,7 @@ test('data persists across page reload (same anon-{uuid}, same volume)', async (
 test('a11y: production bundle is axe-clean on the populated state', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByText('No todos yet.')).toBeVisible();
-  await page.getByPlaceholder('Add a todo…').fill('a11y smoke');
-  await page.getByPlaceholder('Add a todo…').press('Enter');
+  await addTodo(page, 'a11y smoke');
   await expect(page.getByText('a11y smoke')).toBeVisible();
 
   const results = await new AxeBuilder({ page })
