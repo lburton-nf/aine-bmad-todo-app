@@ -170,9 +170,18 @@ live in `_bmad-output/implementation-artifacts/`.
 Security review and light pen test of the production Docker artifact:
 [SECURITY_REVIEW.md](SECURITY_REVIEW.md). 22 probes across SQL injection,
 cross-user isolation, path traversal, XSS, CORS, container privilege,
-build-layer secrets, and `npm audit` × 6 — no exploitable findings, two
-Low (defence-in-depth headers + CORS allow-methods latent split-origin
-breakage), four Informational.
+build-layer secrets, and `npm audit` × 6 — no exploitable findings; the
+two Low items (CORS allow-methods, browser-defence headers) closed in
+`b243532` (`@fastify/helmet` + explicit CORS methods); four Informational
+items remain by-design.
+
+## QA / Test report
+
+Full QA breakdown — pyramid layers, per-layer counts, coverage actuals,
+tooling, reproduction commands, known gaps: [TEST_REPORT.md](TEST_REPORT.md).
+148 automated tests + 22 pen probes; 80% coverage threshold enforced on
+both runtimes, server actuals 95.7 / 91.6 / 100 / 95.5, client actuals
+89.8 / 81.3 / 92.9 / 92.1.
 
 ## Repository layout
 
