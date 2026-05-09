@@ -10,5 +10,6 @@ data/
 # Playwright outputs
 playwright-report/
 test-results/
+test-results-docker/
 .playwright/
 playwright/.cache/

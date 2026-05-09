@@ -8,6 +8,9 @@ const PORT = 5173;
 
 export default defineConfig({
   testDir: './e2e',
+  // *.docker.spec.ts is the production smoke suite — runs against the Docker
+  // container via `npm run test:e2e:docker`, not the Vite dev stack.
+  testIgnore: /\.docker\.spec\.ts$/,
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
