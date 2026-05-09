@@ -32,7 +32,7 @@ test('GET /healthz returns 200 with HealthResponse shape', async () => {
   }
 });
 
-test('AI-1: 2KB JSON body returns 413 (bodyLimit invariant)', async () => {
+test('2KB JSON body returns 413 (1 KB bodyLimit invariant)', async () => {
   const app = await makeAppWithEcho();
   try {
     const res = await app.inject({
@@ -47,7 +47,7 @@ test('AI-1: 2KB JSON body returns 413 (bodyLimit invariant)', async () => {
   }
 });
 
-test('AI-2: unknown path returns 404 with default JSON envelope (no SPA fallback)', async () => {
+test('unknown path returns 404 with the default JSON envelope (no SPA fallback)', async () => {
   const app = await makeApp();
   try {
     const res = await app.inject({ method: 'GET', url: '/nope' });

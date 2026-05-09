@@ -48,7 +48,7 @@ test('clicking the checkbox toggles completion (with strike-through)', async ({ 
   await expect(page.locator('.todo-item__description--done')).toContainText('mark me done');
 });
 
-test('Mo9: clicking the description text toggles completion (label wrapper)', async ({ page }) => {
+test('clicking the description text toggles completion (label wrapper)', async ({ page }) => {
   await freshPage(page);
   await page.getByPlaceholder('Add a todo…').fill('click the text');
   await page.getByPlaceholder('Add a todo…').press('Enter');

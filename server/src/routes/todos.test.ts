@@ -100,9 +100,8 @@ test('GET /todos with malformed X-User-Id returns 400', async () => {
       'anon-abc',
       'anon-XX111111-1111-1111-1111-111111111111',
       'anon-11111111-1111-1111-1111-1111111111111', // 37 chars after prefix
-      // Mo4: 36 hex chars but no dashes — the old loose regex
-      // /^anon-[0-9a-f-]{36}$/ accepted this; the canonical 8-4-4-4-12
-      // shape rejects it.
+      // 36 hex chars without dashes — must be rejected by the canonical
+      // 8-4-4-4-12 shape (a laxer regex would let this through).
       'anon-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
     ];
     for (const bad of malformed) {
@@ -135,7 +134,7 @@ test('GET /todos with duplicate X-User-Id headers returns 400', async () => {
   }
 });
 
-test('NFR-5: 400 response does NOT echo the bad X-User-Id value', async () => {
+test('400 response does NOT echo the bad X-User-Id value', async () => {
   const app = await makeApp();
   try {
     const sensitive = 'anon-leaked-secret-value-not-a-real-uuid';
@@ -231,7 +230,7 @@ test('POST /todos with duplicate id (same user) returns 400 with default envelop
   }
 });
 
-test('AI-3 unification: duplicate id from a DIFFERENT user returns 400 (no ownership leak)', async () => {
+test('duplicate id from a DIFFERENT user returns 400 (no ownership leak)', async () => {
   const app = await makeApp();
   try {
     expect((await postTodo(app, U1, { id: ID1, description: 'u1 owns this' })).statusCode).toBe(
@@ -268,7 +267,7 @@ test('POST /todos rejects bad descriptions (empty, whitespace-only, > 280 chars 
   }
 });
 
-test('Mo7: POST /todos trims leading/trailing whitespace before storing the description', async () => {
+test('POST /todos trims leading/trailing whitespace before storing the description', async () => {
   const app = await makeApp();
   try {
     const res = await postTodo(app, U1, { id: ID1, description: '  buy bread  ' });
@@ -280,7 +279,7 @@ test('Mo7: POST /todos trims leading/trailing whitespace before storing the desc
   }
 });
 
-test('Mi9: POST /todos counts trimmed length, not raw, against the 280 limit', async () => {
+test('POST /todos counts trimmed length, not raw, against the 280 limit', async () => {
   const app = await makeApp();
   try {
     // 280 meaningful chars wrapped in 4 chars of whitespace: trimmed = 280, accepted.
@@ -297,7 +296,7 @@ test('Mi9: POST /todos counts trimmed length, not raw, against the 280 limit', a
   }
 });
 
-test('Mi3: POST /todos counts graphemes, not UTF-16 code units (mixed text + emoji)', async () => {
+test('POST /todos counts graphemes, not UTF-16 code units (mixed text + emoji)', async () => {
   // FR26 bodyLimit (1 KB) is the binding constraint for pure-emoji payloads
   // — 280 emoji at 4 UTF-8 bytes apiece is ~1.1 KB, rejected at the parser
   // before the validator runs. So we exercise grapheme counting via mixed
@@ -431,7 +430,7 @@ test('PATCH /todos/:id flips completed and returns 200 + updated Todo', async ()
   }
 });
 
-test('AI-3: PATCH on cross-user :id returns 404 (no ownership leak)', async () => {
+test('PATCH on cross-user :id returns 404 (no ownership leak)', async () => {
   const app = await makeApp((db) => {
     db.createTodo(U2, { id: ID1, description: 'u2 task' });
   });
@@ -453,7 +452,7 @@ test('AI-3: PATCH on cross-user :id returns 404 (no ownership leak)', async () =
   }
 });
 
-test('AI-3: PATCH on non-existent :id returns 404 (same envelope as cross-user)', async () => {
+test('PATCH on non-existent :id returns 404 (same envelope as cross-user)', async () => {
   const app = await makeApp();
   try {
     const res = await patchTodo(app, U1, ID1, { completed: true });
@@ -523,7 +522,7 @@ test('DELETE /todos/:id removes the row and returns 204', async () => {
   }
 });
 
-test('AI-3: DELETE on cross-user :id returns 404 and leaves row intact', async () => {
+test('DELETE on cross-user :id returns 404 and leaves row intact', async () => {
   const app = await makeApp((db) => {
     db.createTodo(U2, { id: ID1, description: 'u2 task' });
   });
@@ -545,7 +544,7 @@ test('AI-3: DELETE on cross-user :id returns 404 and leaves row intact', async (
   }
 });
 
-test('AI-3: DELETE on non-existent :id returns 404 (same envelope as cross-user)', async () => {
+test('DELETE on non-existent :id returns 404 (same envelope as cross-user)', async () => {
   const app = await makeApp();
   try {
     const res = await app.inject({

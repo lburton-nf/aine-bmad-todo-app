@@ -106,7 +106,7 @@ test('updateCompleted flips the bit and returns the updated Todo', () => {
   }
 });
 
-test('AI-3: updateCompleted on a row owned by another user returns null and does not mutate', () => {
+test('updateCompleted on a row owned by another user returns null and does not mutate', () => {
   const db = makeDb();
   try {
     db.createTodo(U2, { id: fixtureId('1'), description: 'u2 task' });
@@ -119,7 +119,7 @@ test('AI-3: updateCompleted on a row owned by another user returns null and does
   }
 });
 
-test('AI-3: updateCompleted on a missing id returns null (same as cross-user — no leak)', () => {
+test('updateCompleted on a missing id returns null (same envelope as cross-user — no leak)', () => {
   const db = makeDb();
   try {
     const result = db.updateCompleted(U1, fixtureId('9'), true);
@@ -140,7 +140,7 @@ test('deleteTodo removes the row and returns true', () => {
   }
 });
 
-test('AI-3: deleteTodo on cross-user row returns false and leaves the row', () => {
+test('deleteTodo on cross-user row returns false and leaves the row', () => {
   const db = makeDb();
   try {
     db.createTodo(U2, { id: fixtureId('1'), description: 'u2 task' });

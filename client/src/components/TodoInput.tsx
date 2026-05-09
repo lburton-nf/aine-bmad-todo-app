@@ -18,7 +18,7 @@ export function TodoInput({ onSubmit }: Props) {
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key !== 'Enter') return;
     const trimmed = value.trim();
-    if (trimmed.length === 0) return; // Empty/whitespace guard (FR25 client side)
+    if (trimmed.length === 0) return;
     onSubmit(value);
     setValue('');
     inputRef.current?.focus();

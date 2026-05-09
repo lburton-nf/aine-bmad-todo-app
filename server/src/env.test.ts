@@ -36,7 +36,7 @@ test('defaults: PORT=3000, DB_PATH=./data/todos.db, CORS_ORIGIN="", NODE_ENV=dev
   expect(env.HOST).toBe('127.0.0.1');
 });
 
-test('Mi2: HOST defaults to 0.0.0.0 in production (Docker single-image deploy)', async () => {
+test('HOST defaults to 0.0.0.0 in production (Docker single-image deploy)', async () => {
   process.env.NODE_ENV = 'production';
   process.env.CORS_ORIGIN = 'https://example.com';
   delete process.env.HOST;
@@ -44,7 +44,7 @@ test('Mi2: HOST defaults to 0.0.0.0 in production (Docker single-image deploy)',
   expect(env.HOST).toBe('0.0.0.0');
 });
 
-test('Mi2: HOST honours an explicit override regardless of NODE_ENV', async () => {
+test('HOST honours an explicit override regardless of NODE_ENV', async () => {
   delete process.env.NODE_ENV;
   process.env.HOST = '192.168.1.10';
   const env = await loadEnv();

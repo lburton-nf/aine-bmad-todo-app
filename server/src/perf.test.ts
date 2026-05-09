@@ -49,7 +49,7 @@ async function makeApp(seed?: (db: Db) => void) {
   return buildServer({ corsOrigin: '', logger: false, db });
 }
 
-test(`NFR-4: GET /todos p95 < ${P95_BUDGET_MS}ms over ${ITERATIONS} requests`, async () => {
+test(`GET /todos p95 stays under ${P95_BUDGET_MS}ms over ${ITERATIONS} requests`, async () => {
   const app = await makeApp((db) => {
     // Seed 25 rows so list-rendering exercises a representative payload.
     for (let i = 0; i < 25; i++) {
@@ -74,7 +74,7 @@ test(`NFR-4: GET /todos p95 < ${P95_BUDGET_MS}ms over ${ITERATIONS} requests`, a
   }
 });
 
-test(`NFR-4: POST /todos p95 < ${P95_BUDGET_MS}ms over ${ITERATIONS} requests`, async () => {
+test(`POST /todos p95 stays under ${P95_BUDGET_MS}ms over ${ITERATIONS} requests`, async () => {
   const app = await makeApp();
   try {
     for (let i = 0; i < WARMUP; i++) {
@@ -105,7 +105,7 @@ test(`NFR-4: POST /todos p95 < ${P95_BUDGET_MS}ms over ${ITERATIONS} requests`, 
   }
 });
 
-test(`NFR-4: PATCH /todos/:id p95 < ${P95_BUDGET_MS}ms over ${ITERATIONS} requests`, async () => {
+test(`PATCH /todos/:id p95 stays under ${P95_BUDGET_MS}ms over ${ITERATIONS} requests`, async () => {
   const TARGET_ID = uuid(0);
   const app = await makeApp((db) => {
     db.createTodo(U1, { id: TARGET_ID, description: 'toggle me' });
@@ -138,7 +138,7 @@ test(`NFR-4: PATCH /todos/:id p95 < ${P95_BUDGET_MS}ms over ${ITERATIONS} reques
   }
 });
 
-test(`NFR-4: DELETE /todos/:id p95 < ${P95_BUDGET_MS}ms over ${ITERATIONS} requests`, async () => {
+test(`DELETE /todos/:id p95 stays under ${P95_BUDGET_MS}ms over ${ITERATIONS} requests`, async () => {
   // Seed enough rows for the full warmup+measurement run (each iteration
   // consumes one row).
   const TOTAL = WARMUP + ITERATIONS;

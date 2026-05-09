@@ -6,8 +6,8 @@ interface Props {
 
 export function DeleteAllControl({ onConfirm }: Props) {
   const [confirming, setConfirming] = useState(false);
-  // Mi6: focus the safe (Cancel) action by default so an accidental Enter
-  // can't destroy data. Erase is reachable via Tab.
+  // Focus the safe (Cancel) action by default so an accidental Enter can't
+  // destroy data. Erase is reachable via Tab.
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {

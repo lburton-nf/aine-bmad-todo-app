@@ -35,7 +35,7 @@ export async function buildServer(opts: BuildServerOpts): Promise<FastifyInstanc
   const app = Fastify({
     bodyLimit: 1024,
     logger: opts.logger ?? {
-      // NFR-5: scrub X-User-Id from every log line.
+      // Scrub X-User-Id from every log line.
       redact: ['req.headers["x-user-id"]'],
     },
   });
@@ -59,11 +59,11 @@ export async function buildServer(opts: BuildServerOpts): Promise<FastifyInstanc
   });
 
   // The /todos routes plugin owns its own preHandler — keeps /healthz auth-free
-  // and lets unmatched paths fall through to Fastify's default 404 (AI-2).
+  // and lets unmatched paths fall through to Fastify's default 404.
   await app.register(todosRoutes);
 
-  // Single-image deploy: serve the built client from / and let it 404
-  // unmatched paths via Fastify's default (AI-2: no SPA fallback in v1).
+  // Single-image deploy: serve the built client from / and let unmatched
+  // paths return Fastify's default 404 (no SPA fallback in v1).
   if (opts.staticRoot) {
     await app.register(fastifyStatic, {
       root: opts.staticRoot,

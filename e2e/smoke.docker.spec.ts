@@ -23,7 +23,7 @@ test('healthz returns the canonical shape with the package version', async ({
   expect(body.version).toMatch(/^\d+\.\d+\.\d+$/);
 });
 
-test('AI-2: unknown path returns the default JSON 404 envelope (production layering)', async ({
+test('unknown path returns the default JSON 404 envelope under @fastify/static layering', async ({
   request,
   baseURL,
 }) => {
@@ -55,7 +55,7 @@ test('create round-trip: POST /todos works through Fastify (no proxy in producti
   await expect(page.getByText('No todos yet.')).toHaveCount(0);
 });
 
-test('FR11: data persists across page reload (same anon-{uuid}, same volume)', async ({ page }) => {
+test('data persists across page reload (same anon-{uuid}, same volume)', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByText('No todos yet.')).toBeVisible();
   await page.getByPlaceholder('Add a todo…').fill('survives reload');

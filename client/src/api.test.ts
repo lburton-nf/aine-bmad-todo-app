@@ -168,9 +168,9 @@ test('AbortSignal.timeout firing throws ApiError(category=timeout)', async () =>
   });
 });
 
-// ─── FR9: client treats X-User-Id rejection as a reset trigger ───
+// ─── client treats X-User-Id rejection as a reset trigger ───
 
-test('FR9: 400 "X-User-Id … missing or malformed" triggers identity reset and one retry', async () => {
+test('400 "X-User-Id … missing or malformed" triggers identity reset and one retry', async () => {
   localStorage.setItem('todo.userId', 'tampered-value');
   const calls: { url: string; userId: string }[] = [];
   let attempt = 0;
@@ -208,7 +208,7 @@ test('FR9: 400 "X-User-Id … missing or malformed" triggers identity reset and 
   expect(calls[1].userId).toMatch(/^anon-/);
 });
 
-test('FR9: retry guard prevents an infinite reset loop on persistent 400', async () => {
+test('retry guard prevents an infinite reset loop on persistent 400', async () => {
   let attempts = 0;
   vi.stubGlobal(
     'fetch',
@@ -227,7 +227,7 @@ test('FR9: retry guard prevents an infinite reset loop on persistent 400', async
   expect(attempts).toBe(2);
 });
 
-test('FR9: a 400 unrelated to X-User-Id does NOT trigger a reset', async () => {
+test('a 400 unrelated to X-User-Id does NOT trigger a reset', async () => {
   const before = localStorage.getItem('todo.userId');
   let attempts = 0;
   vi.stubGlobal(

@@ -26,7 +26,7 @@ async function fail(route: Route) {
   });
 }
 
-test('NFR-2: POST rollback — optimistic create reverts on server failure', async ({ page }) => {
+test('POST rollback — optimistic create reverts on server failure', async ({ page }) => {
   // Register the failing POST route BEFORE goto so the handler is in place
   // when the user types. The initial GET is allowed through via continue().
   await page.route('**/todos', async (route) => {
@@ -47,7 +47,7 @@ test('NFR-2: POST rollback — optimistic create reverts on server failure', asy
   await expect(page.getByText('rollback me')).toHaveCount(0);
 });
 
-test('NFR-2: PATCH rollback — optimistic toggle reverts on server failure', async ({ page }) => {
+test('PATCH rollback — optimistic toggle reverts on server failure', async ({ page }) => {
   await freshPage(page);
 
   // Create a real todo first (no mock yet).
@@ -74,9 +74,7 @@ test('NFR-2: PATCH rollback — optimistic toggle reverts on server failure', as
   await expect(checkbox).not.toBeChecked();
 });
 
-test('NFR-2: DELETE rollback — optimistic delete restores the row on server failure', async ({
-  page,
-}) => {
+test('DELETE rollback — optimistic delete restores the row on server failure', async ({ page }) => {
   await freshPage(page);
 
   // Create a real todo first.

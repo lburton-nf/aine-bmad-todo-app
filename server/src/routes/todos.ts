@@ -1,20 +1,18 @@
 import type { FastifyPluginAsync, FastifyReply } from 'fastify';
 import type { CreateTodoRequest } from '../../../shared/types';
 
-// X-User-Id is `anon-<canonical UUID>` — same 8-4-4-4-12 hex shape that
+// X-User-Id is `anon-<canonical UUID>` — the same 8-4-4-4-12 hex shape that
 // crypto.randomUUID() emits, locked here so a tampered localStorage value
 // (e.g. 36 hex chars without dashes) is rejected the same way the body
-// validators reject malformed todo ids. Architecture's looser
-// /^anon-[0-9a-f-]{36}$/ was tightened here per REVIEW_1 Mo4.
+// validators reject malformed todo ids.
 const USER_ID_REGEX = /^anon-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const DESCRIPTION_MAX = 280;
 
-// Count user-perceived characters, not UTF-16 code units. A description of
-// 280 emoji used to fail at ~140 because each emoji is a surrogate pair
-// (length 2 in UTF-16); Intl.Segmenter counts what the user actually typed
-// (REVIEW_1 Mi3). Constructed once at module load — segmenters are cheap
-// to reuse and not cheap to construct on every request.
+// Count user-perceived characters (graphemes), not UTF-16 code units, so
+// a 280-emoji description doesn't fail at ~140 because each emoji is a
+// surrogate pair. Segmenters are cheap to reuse and not cheap to
+// construct, so we build one at module load.
 const DESCRIPTION_SEGMENTER = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
 function graphemeCount(s: string): number {
   return [...DESCRIPTION_SEGMENTER.segment(s)].length;
@@ -88,9 +86,8 @@ function isPrimaryKeyViolation(err: unknown): boolean {
 }
 
 const todosRoutes: FastifyPluginAsync = (app) => {
-  // Plugin-scoped preHandler — runs for every route registered in this plugin
-  // (the four /todos verbs), and only for those. /healthz and any other
-  // app-level routes are unaffected.
+  // Scopes auth to /todos only — /healthz and any future app-level routes
+  // stay unauthenticated.
   app.addHook('preHandler', async (request, reply) => {
     const headerValue = request.headers['x-user-id'];
     if (Array.isArray(headerValue)) {

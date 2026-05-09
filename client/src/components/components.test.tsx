@@ -104,7 +104,7 @@ test('TodoItem checkbox click invokes onToggle with the id', () => {
   expect(onToggle).toHaveBeenCalledWith(T1.id);
 });
 
-test('Mo9: clicking the description text toggles via the label wrapper', () => {
+test('clicking the description text toggles via the label wrapper', () => {
   const onToggle = vi.fn();
   const c = mount(<TodoItem todo={T1} pending={false} onToggle={onToggle} onDelete={() => {}} />);
   const description = c.querySelector<HTMLSpanElement>('.todo-item__description')!;
@@ -122,7 +122,7 @@ test('TodoItem delete button click invokes onDelete with the id', () => {
     button.click();
   });
   expect(onDelete).toHaveBeenCalledWith(T1.id);
-  // Mo8: aria-label is contextual (carries the description) so a screen reader
+  // aria-label is contextual (carries the description) so a screen reader
   // user knows which row is being deleted.
   expect(button.getAttribute('aria-label')).toBe(`Delete "${T1.description}"`);
 });
@@ -204,7 +204,7 @@ test('ErrorState renders message + retry/dismiss; click handlers fire correctly'
 
 // ─── DeleteAllControl ───
 
-test('Mi6: DeleteAllControl expands to confirm row on click; focus moves to Cancel (safe default)', () => {
+test('DeleteAllControl expands to confirm row on click; focus moves to Cancel (safe default)', () => {
   const c = mount(<DeleteAllControl onConfirm={() => {}} />);
   const link = c.querySelector<HTMLButtonElement>('.delete-all-link')!;
   act(() => {
