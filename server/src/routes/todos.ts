@@ -35,13 +35,13 @@ function validateCreateBody(body: unknown): CreateValidation {
   if (trimmed.length === 0) {
     return { ok: false, message: 'description must not be empty' };
   }
-  if (description.length > DESCRIPTION_MAX) {
+  if (trimmed.length > DESCRIPTION_MAX) {
     return {
       ok: false,
       message: `description must be at most ${DESCRIPTION_MAX} characters`,
     };
   }
-  return { ok: true, value: { id, description } };
+  return { ok: true, value: { id, description: trimmed } };
 }
 
 type PatchValidation = { ok: true; value: { completed: boolean } } | { ok: false; message: string };

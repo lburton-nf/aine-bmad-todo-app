@@ -244,7 +244,7 @@ test('AI-3 unification: duplicate id from a DIFFERENT user returns 400 (no owner
   }
 });
 
-test('POST /todos rejects bad descriptions (empty, whitespace-only, > 280 chars)', async () => {
+test('POST /todos rejects bad descriptions (empty, whitespace-only, > 280 chars trimmed)', async () => {
   const app = await makeApp();
   try {
     const cases: Array<{ id: string; description: string }> = [
@@ -259,6 +259,35 @@ test('POST /todos rejects bad descriptions (empty, whitespace-only, > 280 chars)
     // Boundary: exactly 280 chars succeeds.
     const okRes = await postTodo(app, U1, { id: ID1, description: 'y'.repeat(280) });
     expect(okRes.statusCode).toBe(201);
+  } finally {
+    await app.close();
+  }
+});
+
+test('Mo7: POST /todos trims leading/trailing whitespace before storing the description', async () => {
+  const app = await makeApp();
+  try {
+    const res = await postTodo(app, U1, { id: ID1, description: '  buy bread  ' });
+    expect(res.statusCode).toBe(201);
+    const body = res.json() as { description: string };
+    expect(body.description).toBe('buy bread');
+  } finally {
+    await app.close();
+  }
+});
+
+test('Mi9: POST /todos counts trimmed length, not raw, against the 280 limit', async () => {
+  const app = await makeApp();
+  try {
+    // 280 meaningful chars wrapped in 4 chars of whitespace: trimmed = 280, accepted.
+    const padded = '  ' + 'y'.repeat(280) + '  ';
+    expect(padded.length).toBe(284);
+    const res = await postTodo(app, U1, { id: ID1, description: padded });
+    expect(res.statusCode).toBe(201);
+    // 281 meaningful chars wrapped in whitespace: trimmed = 281, rejected.
+    const overPadded = '  ' + 'z'.repeat(281) + '  ';
+    const overRes = await postTodo(app, U1, { id: ID2, description: overPadded });
+    expect(overRes.statusCode).toBe(400);
   } finally {
     await app.close();
   }
