@@ -244,14 +244,15 @@ Multi-arch Docker builds need `--platform=linux/amd64` (or `arm64`) explicit if 
 
 ## Suggested fix order (by ROI)
 
-1. ~~**M2** + **Mo7** + **Mo9** + **Mi9**~~ — done.
-2. ~~**M1**~~ — done.
-3. ~~**M3**~~ — done.
-4. ~~**M4**~~ — done.
-5. **M5** — single CI workflow file. ~60 lines. Table-stakes for portfolio. Now even more leverage — `npm run test:e2e:docker` is ready to wire up.
-6. **Mo1** + **Mo2** + **Mo3** — doc cleanup. ~1 hour.
-7. **M6** — Firefox + WebKit projects in playwright config. ~6 lines.
-8. The rest in any order.
+All Major items closed (M1–M4) plus Mo7 / Mo9 / Mi9. Fixes already shipped are listed in the Status block at the top; the fix order below covers only what's still open.
+
+1. **M5** — single CI workflow file. ~60 lines of YAML. Highest remaining ROI: every other check (lint, format, unit tests, coverage thresholds, Docker integration, dev e2e, production smoke) is already a one-line npm script — CI is just the wiring. Table-stakes for portfolio.
+2. **Mo10** + **Mo11** + **Mo8** — three trivial wins, each < 5 lines: README `curl` → `wget` correction (Dockerfile reality), `<title>client</title>` → `Todos`, and contextual delete `aria-label` (`Delete "${todo.description}"` instead of the generic `Delete`).
+3. **Mo1** + **Mo2** + **Mo3** — doc cleanup. `architecture.md` drift (camelCase vs. snake_case wire format, prescribed-but-missing `identity.ts` / `validation.ts`), `deferred-work.md` stale `status: build-incomplete`, stock Vite `client/README.md`. ~1 hour.
+4. **Mo4** — tighten `USER_ID_REGEX` from `/^anon-[0-9a-f-]{36}$/` to the canonical 8-4-4-4-12 UUID shape on both server and client. Same regex, two places. No behaviour change for legitimate users; closes the asymmetry with the strict-test-fixture regex.
+5. **M6** — add Firefox + WebKit projects to `playwright.config.ts`. ~6 lines. Each project doubles dev-e2e wall-time, so gate behind a CI-only env var or a separate `test:e2e:full` script if local-dev speed matters.
+6. **Mo12-FR12 + Mo5–Mo7-already-covered** — Mo12's FR11 half is closed by the production smoke suite; the FR12 (`docker rm` + `docker run` from the user-facing flow) half is already covered by `tests/docker.test.ts`, so this reduces to a doc note rather than new tests.
+7. **Mo13 + Mi1–Mi10** — version drift, dead `smoke.test.ts` files, ROLLBACK_DELETE_ALL not clearing `optimisticPending`, p95 perf benchmark, etc. Most are < 10 lines each; pick the ones that earn their keep for portfolio polish.
 
 ---
 
