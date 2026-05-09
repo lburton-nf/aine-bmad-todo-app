@@ -123,6 +123,31 @@ restart (verified by `tests/docker.test.ts`'s explicit
 proofs covers the full demo step without a brittle "close-and-reopen"
 browser test that wouldn't add information.
 
+## Production deploy notes
+
+**Cross-arch builds.** `better-sqlite3` ships prebuilt native binaries —
+`npm ci` fetches the one matching the build host's architecture. If you
+build on Mac silicon (`linux/arm64` on a typical Docker Desktop / OrbStack
+setup) and deploy to an `x86_64` host, the prebuilt that lands in the
+image won't run. Either build on the deploy architecture, or pass an
+explicit `--platform` so Docker fetches the matching binary:
+
+```bash
+docker build --platform=linux/amd64 -t todo-app-3 .
+# Or with buildx for a multi-arch manifest:
+docker buildx build --platform=linux/amd64,linux/arm64 -t todo-app-3 .
+```
+
+**Required env vars in production.** `NODE_ENV=production` is set by the
+Dockerfile; in that mode the server refuses to start unless `CORS_ORIGIN`
+is also set (single-origin allow-list — set to the public URL where the
+app is reachable). `STATIC_ROOT` is also set by the Dockerfile to point
+at the bundled `client/dist`. Override `PORT`, `HOST`, or `DB_PATH` if
+the deploy substrate dictates non-defaults.
+
+**Persistence.** Mount a host directory (or named volume) at `/data`.
+SQLite WAL files live alongside `todos.db`; back them all up together.
+
 ## Architecture pointers
 
 Planning artifacts in `_bmad-output/planning-artifacts/`:
