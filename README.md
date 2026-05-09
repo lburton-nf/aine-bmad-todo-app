@@ -71,6 +71,39 @@ delete, newest-first ordering, bulk delete with confirm/cancel. The a11y
 spec asserts zero `critical`/`serious` axe-core violations against the
 empty / populated / error states.
 
+`npm run test:e2e:docker` runs a separate **production smoke suite** against
+the actual built Docker image (port 3098, ephemeral mktemp volume,
+trap-based cleanup). It exercises paths the dev e2e doesn't see: static
+file serving via `@fastify/static`, same-origin CORS, the production
+React bundle, and the AI-2 404-envelope invariant under the static-plugin
+layering.
+
+### How the user-acceptance demo steps are covered
+
+The PRD's 8-step demo (Success Criteria → User Success) maps to automated
+tests as follows. **Refresh persistence (FR11)** and **container-restart
+persistence (FR12)** are the two demo steps that span layers; rather than
+one test that mocks the whole world, coverage is layered.
+
+| Demo step                                     | Layer                                | Test                                                                                 |
+| --------------------------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------ |
+| 1. Empty state visible                        | dev e2e + production smoke           | `e2e/todo.spec.ts:15`, `e2e/smoke.docker.spec.ts:41`                                 |
+| 2. Type + Enter, task appears                 | dev e2e + production smoke           | `e2e/todo.spec.ts:22`, `e2e/smoke.docker.spec.ts:47`                                 |
+| 3. Click row to mark complete                 | dev e2e (checkbox + label-click)     | `e2e/todo.spec.ts:37` and `e2e/todo.spec.ts:51` (Mo9)                                |
+| 4. Refresh, task still present (**FR11**)     | production smoke (real reload)       | `e2e/smoke.docker.spec.ts:58`                                                        |
+| 5. Add second task                            | dev e2e                              | `e2e/todo.spec.ts:74`                                                                |
+| 6. Delete second task                         | dev e2e                              | `e2e/todo.spec.ts:63`                                                                |
+| 7. 320 px width, ≥ 44 px touch targets        | manual + a11y spec                   | `e2e/accessibility.spec.ts` (axe-clean), label wrapper enforces 44 px row tap target |
+| 8. Close + reopen, todos preserved (**FR12**) | server volume + browser localStorage | `tests/docker.test.ts` (volume) + `e2e/smoke.docker.spec.ts:58` (identity)           |
+
+Step 8 is the layered case: closing the browser tab and reopening the URL
+relies on (a) `localStorage` carrying the same `anon-{uuid}` across tabs
+(verified by smoke step 4), and (b) the SQLite volume surviving container
+restart (verified by `tests/docker.test.ts`'s explicit
+`docker rm` + `docker run` against the same volume). Composing those two
+proofs covers the full demo step without a brittle "close-and-reopen"
+browser test that wouldn't add information.
+
 ## Architecture pointers
 
 Planning artifacts in `_bmad-output/planning-artifacts/`:
