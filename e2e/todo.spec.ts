@@ -48,6 +48,18 @@ test('clicking the checkbox toggles completion (with strike-through)', async ({ 
   await expect(page.locator('.todo-item__description--done')).toContainText('mark me done');
 });
 
+test('Mo9: clicking the description text toggles completion (label wrapper)', async ({ page }) => {
+  await freshPage(page);
+  await page.getByPlaceholder('Add a todo…').fill('click the text');
+  await page.getByPlaceholder('Add a todo…').press('Enter');
+
+  const checkbox = page.getByRole('checkbox', { name: /click the text/i });
+  await expect(checkbox).not.toBeChecked();
+  // Click the description span, not the checkbox.
+  await page.getByText('click the text').click();
+  await expect(checkbox).toBeChecked();
+});
+
 test('deleting a single todo removes it from the list', async ({ page }) => {
   await freshPage(page);
   await page.getByPlaceholder('Add a todo…').fill('to be deleted');

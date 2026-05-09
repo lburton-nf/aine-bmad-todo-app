@@ -104,6 +104,16 @@ test('TodoItem checkbox click invokes onToggle with the id', () => {
   expect(onToggle).toHaveBeenCalledWith(T1.id);
 });
 
+test('Mo9: clicking the description text toggles via the label wrapper', () => {
+  const onToggle = vi.fn();
+  const c = mount(<TodoItem todo={T1} pending={false} onToggle={onToggle} onDelete={() => {}} />);
+  const description = c.querySelector<HTMLSpanElement>('.todo-item__description')!;
+  act(() => {
+    description.click();
+  });
+  expect(onToggle).toHaveBeenCalledWith(T1.id);
+});
+
 test('TodoItem delete button click invokes onDelete with the id', () => {
   const onDelete = vi.fn();
   const c = mount(<TodoItem todo={T1} pending={false} onToggle={() => {}} onDelete={onDelete} />);

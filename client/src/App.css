@@ -67,7 +67,6 @@
 .todo-item {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
   padding: var(--space-2) 0;
   border-bottom: 1px solid var(--color-border);
 }
@@ -80,8 +79,19 @@
   opacity: 0.6;
 }
 
+/* Wraps the checkbox + description so clicking the text toggles completion
+   (browser-native label behaviour) and the toggle hit-area extends beyond
+   the 18px native checkbox to a full 44px row tap target. */
+.todo-item__toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  cursor: pointer;
+  min-height: 44px;
+}
+
 .todo-item__checkbox {
-  /* Make the visible target large enough; underlying input stays standard. */
   width: 18px;
   height: 18px;
   accent-color: var(--color-accent);
