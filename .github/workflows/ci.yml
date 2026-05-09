@@ -59,13 +59,13 @@ jobs:
       - name: Docker integration test (NFR-6 / FR12 persistence across docker rm)
         run: npm run test:docker
 
-      - name: Install Playwright browsers
-        run: |
-          npm ci  # ensure root playwright is on PATH
-          npx playwright install --with-deps
+      - name: Install Playwright browsers (Chromium + Firefox + WebKit)
+        run: npx playwright install --with-deps chromium firefox webkit
 
-      - name: Dev e2e (Chromium against Vite + Fastify)
+      - name: Dev e2e (Chromium + Firefox + WebKit against Vite + Fastify)
         run: npm run test:e2e
+        env:
+          E2E_ALL_BROWSERS: '1'
 
       - name: Production smoke (Chromium against the built Docker image)
         run: npm run test:e2e:docker
