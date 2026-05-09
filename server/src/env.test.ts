@@ -19,18 +19,36 @@ async function loadEnv() {
   return mod.env;
 }
 
-test('defaults: PORT=3000, DB_PATH=./data/todos.db, CORS_ORIGIN="", NODE_ENV=development, STATIC_ROOT=undefined', async () => {
+test('defaults: PORT=3000, DB_PATH=./data/todos.db, CORS_ORIGIN="", NODE_ENV=development, STATIC_ROOT=undefined, HOST=127.0.0.1', async () => {
   delete process.env.PORT;
   delete process.env.DB_PATH;
   delete process.env.CORS_ORIGIN;
   delete process.env.NODE_ENV;
   delete process.env.STATIC_ROOT;
+  delete process.env.HOST;
   const env = await loadEnv();
   expect(env.PORT).toBe(3000);
   expect(env.DB_PATH).toBe('./data/todos.db');
   expect(env.CORS_ORIGIN).toBe('');
   expect(env.NODE_ENV).toBe('development');
   expect(env.STATIC_ROOT).toBeUndefined();
+  // Mi2: dev default is loopback so the dev server isn't accidentally LAN-exposed.
+  expect(env.HOST).toBe('127.0.0.1');
+});
+
+test('Mi2: HOST defaults to 0.0.0.0 in production (Docker single-image deploy)', async () => {
+  process.env.NODE_ENV = 'production';
+  process.env.CORS_ORIGIN = 'https://example.com';
+  delete process.env.HOST;
+  const env = await loadEnv();
+  expect(env.HOST).toBe('0.0.0.0');
+});
+
+test('Mi2: HOST honours an explicit override regardless of NODE_ENV', async () => {
+  delete process.env.NODE_ENV;
+  process.env.HOST = '192.168.1.10';
+  const env = await loadEnv();
+  expect(env.HOST).toBe('192.168.1.10');
 });
 
 test('STATIC_ROOT picks up an absolute path when set', async () => {

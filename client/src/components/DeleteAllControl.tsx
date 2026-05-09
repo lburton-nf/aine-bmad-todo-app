@@ -6,10 +6,12 @@ interface Props {
 
 export function DeleteAllControl({ onConfirm }: Props) {
   const [confirming, setConfirming] = useState(false);
-  const eraseButtonRef = useRef<HTMLButtonElement>(null);
+  // Mi6: focus the safe (Cancel) action by default so an accidental Enter
+  // can't destroy data. Erase is reachable via Tab.
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    if (confirming) eraseButtonRef.current?.focus();
+    if (confirming) cancelButtonRef.current?.focus();
   }, [confirming]);
 
   useEffect(() => {
@@ -33,7 +35,6 @@ export function DeleteAllControl({ onConfirm }: Props) {
     <div className="delete-all-confirm" role="group" aria-label="Confirm erase">
       <span className="delete-all-confirm__text">Erase all your todos? This cannot be undone.</span>
       <button
-        ref={eraseButtonRef}
         type="button"
         className="delete-all-confirm__erase"
         onClick={() => {
@@ -44,6 +45,7 @@ export function DeleteAllControl({ onConfirm }: Props) {
         Erase
       </button>
       <button
+        ref={cancelButtonRef}
         type="button"
         className="delete-all-confirm__cancel"
         onClick={() => setConfirming(false)}

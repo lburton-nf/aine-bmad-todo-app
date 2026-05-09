@@ -54,7 +54,7 @@ Fastify server on `:3000` (see `client/vite.config.ts`).
 ## Tests
 
 ```bash
-npm test                   # client (61) + server (53) unit + integration
+npm test                   # client (63) + server (57) unit + integration
 npm run test:coverage      # both runtimes with 80% line/branch/func/stmt thresholds
 npm run lint               # eslint, both runtimes
 npm run format:check       # prettier

@@ -34,6 +34,11 @@ if (NODE_ENV === 'production' && CORS_ORIGIN === '') {
 
 export const env = Object.freeze({
   PORT: parsePort(process.env.PORT),
+  /** Listen interface. '0.0.0.0' is required inside Docker (so the host
+      port mapping can reach the process); '127.0.0.1' is the safer dev
+      default since '0.0.0.0' would expose the dev server on the LAN.
+      Default: '127.0.0.1' for dev/test, '0.0.0.0' for production. */
+  HOST: (process.env.HOST ?? (NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1')).trim(),
   DB_PATH: process.env.DB_PATH ?? './data/todos.db',
   CORS_ORIGIN,
   NODE_ENV,

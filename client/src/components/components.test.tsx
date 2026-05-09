@@ -204,15 +204,17 @@ test('ErrorState renders message + retry/dismiss; click handlers fire correctly'
 
 // ─── DeleteAllControl ───
 
-test('DeleteAllControl link expands to confirm row on click; focus moves to Erase', () => {
+test('Mi6: DeleteAllControl expands to confirm row on click; focus moves to Cancel (safe default)', () => {
   const c = mount(<DeleteAllControl onConfirm={() => {}} />);
   const link = c.querySelector<HTMLButtonElement>('.delete-all-link')!;
   act(() => {
     link.click();
   });
-  const erase = c.querySelector<HTMLButtonElement>('.delete-all-confirm__erase');
-  expect(erase).not.toBeNull();
-  expect(document.activeElement).toBe(erase);
+  const cancel = c.querySelector<HTMLButtonElement>('.delete-all-confirm__cancel');
+  expect(cancel).not.toBeNull();
+  // Cancel — not Erase — is the focused default so an accidental Enter
+  // collapses the confirm row instead of destroying the user's data.
+  expect(document.activeElement).toBe(cancel);
 });
 
 test('DeleteAllControl Erase fires onConfirm and collapses', () => {
