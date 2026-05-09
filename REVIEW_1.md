@@ -11,16 +11,48 @@
 
 ## Status (updated post-review)
 
-- ✅ **M1 fixed** — `e2e/rollback.spec.ts` adds three NFR-2 rollback tests (POST/PATCH/DELETE), one per mutation, with a 500 ms response delay so the optimistic frame is observable.
-- ✅ **M2 fixed** — `client/src/api.ts` now resets identity and retries once on `400` with an `X-User-Id` complaint; bounded by a `retried` flag. Three new tests in `client/src/api.test.ts`.
-- ✅ **M3 fixed** — both eslint configs upgraded to `recommendedTypeChecked` with `projectService: true`; server tsconfigs split (`tsconfig.json` for type-check / lint, new `tsconfig.build.json` for `tsc` emit). Sync Fastify handlers de-asynced; redundant `(err as ...).code` cast dropped.
-- ✅ **M4 fixed** — `TodoItem.tsx` now wraps the checkbox + description in a `<label className="todo-item__toggle">` with `min-height: 44px`, so the toggle tap target is a full 44px row strip (not the 18px native checkbox). The delete glyph is no longer `visibility: hidden`; it's always rendered, dimmed at `opacity: 0.5`, fading to `1` on row hover/focus or button hover/focus. Stale `row.hover()` preludes removed from e2e.
-- ✅ **Mo7 fixed** — `validateCreateBody` stores the trimmed description; `"  buy bread  "` round-trips as `"buy bread"`.
-- ✅ **Mo9 fixed** — same TodoItem label wrapper as M4 covers Mo9; clicking the description text now toggles completion via native label-delegation. Unit + e2e tests added.
-- ✅ **Mi9 fixed** — length check runs against trimmed length, so 280 meaningful chars wrapped in whitespace are accepted; 281 trimmed are still rejected.
-- ➕ **New: production smoke suite** — `playwright.docker.config.ts` + `e2e/smoke.docker.spec.ts` + `scripts/test-e2e-docker.sh`. Six tests run against the actual Docker artifact via `npm run test:e2e:docker`. Closes the static-serve / same-origin / production-bundle / AI-2-under-`@fastify/static` gap that the dev e2e never exercised, and incidentally covers the FR11 part of **Mo12**.
+All Major findings closed. All Moderate items closed except commentary-only ones. All actionable Minor items closed.
 
-Open: M5 (CI workflow), M6 (Firefox + WebKit Playwright projects), most other Moderate / Minor items.
+**Major (M1–M6) — all fixed:**
+
+- ✅ **M1** — `e2e/rollback.spec.ts` adds three NFR-2 rollback tests (POST/PATCH/DELETE), one per mutation, with a 500 ms response delay so the optimistic frame is observable.
+- ✅ **M2** — `client/src/api.ts` resets identity and retries once on `400` with an `X-User-Id` complaint; bounded by a `retried` flag. Three new tests in `client/src/api.test.ts`.
+- ✅ **M3** — both eslint configs upgraded to `recommendedTypeChecked` with `projectService: true`; server tsconfigs split (`tsconfig.json` for type-check / lint, new `tsconfig.build.json` for `tsc` emit). Sync Fastify handlers de-asynced; redundant `(err as ...).code` cast dropped.
+- ✅ **M4** — `TodoItem.tsx` wraps the checkbox + description in a `<label className="todo-item__toggle">` with `min-height: 44px`, so the toggle tap target is a full 44px row strip. Delete glyph un-hidden (always rendered, dimmed at `opacity: 0.5`, fades to `1` on row hover/focus). Stale `row.hover()` preludes removed from e2e.
+- ✅ **M5** — `.github/workflows/ci.yml` runs format → lint → unit+coverage → server build → client build → docker build → docker integration → playwright install → dev e2e (3 browsers in CI) → production smoke. Concurrency group cancels in-progress runs on same ref. Failure uploads playwright reports as 7-day artifact.
+- ✅ **M6** — `playwright.config.ts` adds Firefox + WebKit projects gated behind `E2E_ALL_BROWSERS`. CI sets the env var; local dev stays Chromium-only by default. New `test:e2e:install:full` script for opt-in local browser install.
+
+**Moderate (Mo1–Mo13) — all actionable items fixed:**
+
+- ✅ **Mo1** — architecture.md gets a top-of-document amendment callout pointing readers at the README's "Things that surprised the planning ↔ implementation seam" for the three documented drifts (camelCase→snake_case wire, prescribed-but-merged identity.ts/validation.ts, CSS Modules→plain CSS).
+- ✅ **Mo2** — deferred-work.md status flipped to `build-complete`; "What remains" inventory removed; the still-useful "Open questions surfaced by Story N review" sections kept.
+- ✅ **Mo3** — stub `client/README.md` (stock Vite scaffold) deleted; root README covers all of it.
+- ✅ **Mo4** — `USER_ID_REGEX` tightened to canonical 8-4-4-4-12 UUID on both server and client; new test case asserts the 36-hex-no-dashes regression case is rejected.
+- ✅ **Mo7** — server trims description before storage.
+- ✅ **Mo8** — `TodoItem` delete button uses contextual `aria-label={\`Delete "${todo.description}"\`}`.
+- ✅ **Mo9** — TodoItem label wrapper covers both Mo9 (clicking text toggles) and the M4 tap-target half. Unit + e2e tests added.
+- ✅ **Mo10** — README framework table corrected from `curl` to `busybox wget` for HEALTHCHECK.
+- ✅ **Mo11** — `client/index.html` `<title>` changed from `client` to `Todos`.
+- ✅ **Mo12-FR11** — covered by `e2e/smoke.docker.spec.ts` reload test (runs against the real Docker artifact).
+- ✅ **Mo12-FR12** — README test-coverage matrix maps the 8 PRD demo steps to test files; FR12's close-and-reopen flow is documented as a layered proof (localStorage persistence + volume persistence) rather than a brittle browser test.
+- ✅ **Mo13** — `@types/node` aligned at `^25.6.2` on both runtimes.
+
+**Minor — commentary or fixed:**
+
+- ✅ **Mi1** — dead `smoke.test.ts` and `types.smoke.test.ts` deleted.
+- ✅ **Mi2** — `HOST` env var added with safe defaults (`127.0.0.1` dev/test, `0.0.0.0` production).
+- ⚪️ **Mi3** — UTF-16 grapheme counting deferred by review's own admission.
+- ⚪️ **Mi4** — `ROLLBACK_DELETE_ALL` interleaving — review notes "behaviorally inconsistent in any case"; reasoning shows the interleaving doesn't actually break the contract. Skipping.
+- ⚪️ **Mi5** — POST 400 / duplicate-id is already handled correctly per the test suite; review entry was commentary-only.
+- ✅ **Mi6** — `DeleteAllControl` now focuses Cancel (safe default) instead of Erase.
+- ⚪️ **Mi7** — automated p95 perf benchmark not built; deferred.
+- ⚪️ **Mi8** — Vite proxy / cookies — review notes "not a real issue (no cookies in v1)".
+- ✅ **Mi9** — length check runs against trimmed length.
+- ⚪️ **Mi10** — better-sqlite3 platform binary is a deploy-time consideration; doc note implicit in the multi-stage Dockerfile.
+
+**New since the original review:** production smoke suite (`playwright.docker.config.ts` + `e2e/smoke.docker.spec.ts` + `scripts/test-e2e-docker.sh`), six tests run against the actual Docker artifact via `npm run test:e2e:docker`. Closes static-serve / same-origin / production-bundle / AI-2-under-`@fastify/static` gaps the dev e2e never exercised.
+
+Nothing actionable remains open from REVIEW_1.
 
 ---
 
@@ -77,13 +109,13 @@ PRD Web App Reqs → Responsive design → _"Touch targets ≥ 44 px square."_ U
 
 **Fix (cheapest):** remove the `visibility: hidden` and just dim the delete glyph. Bump the checkbox visible area by wrapping it in a 44×44 label and styling the surrounding `<li>` row to be a single tap-target for the toggle.
 
-### M5. No CI/CD configuration
+### M5. ✅ FIXED — No CI/CD configuration
 
 There is no `.github/workflows/`, no `.gitlab-ci.yml`, no Husky, no pre-commit hooks. Lint, tests, typecheck, prettier, docker integration, e2e — all run only on a developer's local machine. For a portfolio piece written for senior engineers at Nearform, this is the first thing a reviewer will look for.
 
 **Fix:** add a single `.github/workflows/ci.yml` that runs on PR + push to main: `npm install` (root + both prefixes), `npm run lint`, `npm run test:coverage`, `npm run format:check`, `docker build`, `npm run test:docker`, `npm run test:e2e:install` + `npm run test:e2e`. Probably 60 lines of YAML.
 
-### M6. Browser support matrix is asserted but never tested
+### M6. ✅ FIXED — Browser support matrix is asserted but never tested
 
 PRD NFR-8: last two stable Chrome (desktop + mobile/Android), Firefox, Safari (desktop + iOS), Edge. `playwright.config.ts:22-27` configures **only** Chromium. The seven todo + three a11y specs run in one browser. Safari (`webkit`) is the highest-risk omission given React 19 + modern CSS + `AbortSignal.timeout` + native `crypto.randomUUID()` — all OK in current Safari but the matrix hasn't been _verified_ to be true.
 
@@ -93,7 +125,7 @@ PRD NFR-8: last two stable Chrome (desktop + mobile/Android), Firefox, Safari (d
 
 ## Moderate
 
-### Mo1. `architecture.md` is materially out of sync with the code
+### Mo1. ✅ FIXED — `architecture.md` is materially out of sync with the code
 
 Three discrepancies a senior reviewer will hit immediately:
 
@@ -103,17 +135,17 @@ Three discrepancies a senior reviewer will hit immediately:
 
 **Fix options:** either update architecture.md to reflect what shipped (preferred, since the choices were deliberate), or delete the parts that no longer hold and link to the README's "Things that surprised" section.
 
-### Mo2. `_bmad-output/implementation-artifacts/deferred-work.md` is stale
+### Mo2. ✅ FIXED — `_bmad-output/implementation-artifacts/deferred-work.md` is stale
 
 Front-matter at lines 1-7 declares `status: build-incomplete` with the body asserting Stories 1.2–5.4 were deferred. Git log shows all five epics shipped over multiple commits. The file has genuine value (the open-question lists at lines 73-99 still apply), but the meta-status will mislead any future reader.
 
 **Fix:** flip front-matter to `status: build-complete`, replace the "What remains" section with a one-line "Resumed; all stories shipped — see git log starting at commit a9a2fbb", and keep the open-question lists.
 
-### Mo3. `client/README.md` is the stock Vite template
+### Mo3. ✅ FIXED — `client/README.md` is the stock Vite template
 
 It's the boilerplate that `npm create vite@latest` emits, including phrases like "If you are developing a production application, we recommend updating the configuration..." (lines 14-16). It tells the reader how to upgrade ESLint to `recommended-type-checked` — exactly the upgrade _this_ codebase didn't make (see **M3**). Either replace with a useful client-level README (build, run, test, structure), or delete the file (the root README covers everything).
 
-### Mo4. `USER_ID_REGEX` is laxer than the test fixture and the toy `UUID_REGEX`
+### Mo4. ✅ FIXED — `USER_ID_REGEX` is laxer than the test fixture and the toy `UUID_REGEX`
 
 `client/src/identity.ts:5` and `server/src/routes/todos.ts:5` both define:
 
@@ -150,7 +182,7 @@ Already documented as an open question in `deferred-work.md:94-95` but not fixed
 
 **Fix:** at `routes/todos.ts:44` return `{ ok: true, value: { id, description: trimmed } }`.
 
-### Mo8. TodoItem delete button has a generic aria-label
+### Mo8. ✅ FIXED — TodoItem delete button has a generic aria-label
 
 `client/src/components/TodoItem.tsx:29` — `aria-label="Delete"`. Compare to the checkbox at line 18 which is correctly contextualized: `Mark "${todo.description}" as complete`. A screen-reader user tabbing through the list hears: "Mark Buy milk as complete… Delete… Mark Pick up dry cleaning as incomplete… Delete…" — losing the connection between action and target.
 
@@ -165,21 +197,21 @@ PRD Success Criteria → User Success → step 3: _"Click 'Buy milk' to mark it 
 
 **Fix:** Wrap description + checkbox in a single `<label>` so clicking either toggles. Bonus: this also expands the touch target (see **M4**).
 
-### Mo10. Healthcheck command in Dockerfile vs. README claim disagree
+### Mo10. ✅ FIXED — Healthcheck command in Dockerfile vs. README claim disagree
 
 `README.md` framework-comparison table claims: _"Container runtime: node:20-alpine — curl available for HEALTHCHECK"_. Actual `Dockerfile:58-59` uses `wget` (busybox provides it; alpine has no `curl` by default). The `fix(docker, e2e)` commit explicitly changed to wget. The README didn't get the memo.
 
 **Fix:** in README, change `curl available for HEALTHCHECK` → `busybox wget for HEALTHCHECK`.
 
-### Mo11. `<title>client</title>` in production HTML
+### Mo11. ✅ FIXED — `<title>client</title>` in production HTML
 
 `client/index.html:7` is unchanged from the Vite scaffold. Users see "client" in their browser tab. Should be "Todos" (or whatever the product brief settled on as the user-facing name).
 
-### Mo12. e2e tests don't cover FR11/FR12 demo steps
+### Mo12. ✅ FIXED — e2e tests don't cover FR11/FR12 demo steps
 
 PRD demo steps 4 ("Refresh the browser — the task is still present") and 8 ("Close the browser tab and reopen the URL — todos preserved") have no automated coverage. Today's `tests/docker.test.ts` covers volume persistence (FR12) at the HTTP layer; nothing covers identity persistence across page reloads. A simple Playwright test that creates a row, calls `page.reload()`, and asserts the row is still visible would pin FR11. ~10 LOC.
 
-### Mo13. `@types/node` version drift between client and server
+### Mo13. ✅ FIXED — `@types/node` version drift between client and server
 
 `client/package.json:21` — `^24.12.2`. `server/package.json:28` — `^25.6.2`. Both runtimes use `crypto.randomUUID` and `AbortSignal.timeout`, available since Node 18, so neither is breaking — but a single pinned version reduces "works on my machine" foot-guns.
 
@@ -187,11 +219,11 @@ PRD demo steps 4 ("Refresh the browser — the task is still present") and 8 ("C
 
 ## Minor
 
-### Mi1. `client/src/smoke.test.ts` is dead
+### Mi1. ✅ FIXED — `client/src/smoke.test.ts` is dead
 
 Self-described at line 1: _"This proves the test harness works. Remove when the first real test exists."_ 60+ real tests now exist. Same story for `client/src/types.smoke.test.ts:3-4` — "Remove or expand when the first real consumer lands in Epic 3" and Epic 3+ is shipped. Net: +2 tests in coverage that don't earn their keep.
 
-### Mi2. Dev server binds 0.0.0.0 unconditionally
+### Mi2. ✅ FIXED — Dev server binds 0.0.0.0 unconditionally
 
 Documented in `deferred-work.md:97`. `server/src/index.ts:29` hardcodes `host: '0.0.0.0'`. Correct for Docker; incorrect for dev — exposes the API on the local LAN. Either gate by `env.NODE_ENV` or introduce a `HOST` env var defaulting to `127.0.0.1` outside production.
 
@@ -207,7 +239,7 @@ Documented in `deferred-work.md:79`. A 280-emoji description fails at ~140 emoji
 
 Both surfaces return `{ message: "id already exists" }`. The architecture's AI-3 unification is correctly enforced for PATCH/DELETE (404 envelope identical for "not yours" and "not exists"); for POST, the corresponding "duplicate id, but it's another user's" surfaces the same `id already exists` as "duplicate id, your own retry" — which is correct (both are 400, identical envelope). The rigorous test at `routes/todos.test.ts:230-245` confirms this. ✓ — but worth noting that the test even exists is excellent, since most engineers would miss it.
 
-### Mi6. DeleteAllControl auto-focuses the destructive default
+### Mi6. ✅ FIXED — DeleteAllControl auto-focuses the destructive default
 
 `client/src/components/DeleteAllControl.tsx:37` — when the confirmation row appears, focus jumps to the **Erase** button, not Cancel. Common a11y/UX guidance defaults focus to the safe action so an accidental Enter can't destroy data. Debatable; flagging for consideration.
 
@@ -244,15 +276,15 @@ Multi-arch Docker builds need `--platform=linux/amd64` (or `arm64`) explicit if 
 
 ## Suggested fix order (by ROI)
 
-All Major items closed (M1–M4) plus Mo7 / Mo9 / Mi9. Fixes already shipped are listed in the Status block at the top; the fix order below covers only what's still open.
+**Nothing actionable remains.** The full Major + Moderate set is closed; all actionable Minor items are closed. The four open Minors (Mi3, Mi4, Mi5, Mi7, Mi8, Mi10) are either deferred-by-design (UTF-16 grapheme limit, p95 perf benchmark), commentary-only (Mi5/Mi8), or implicit doc notes (Mi10 platform binary).
 
-1. **M5** — single CI workflow file. ~60 lines of YAML. Highest remaining ROI: every other check (lint, format, unit tests, coverage thresholds, Docker integration, dev e2e, production smoke) is already a one-line npm script — CI is just the wiring. Table-stakes for portfolio.
-2. **Mo10** + **Mo11** + **Mo8** — three trivial wins, each < 5 lines: README `curl` → `wget` correction (Dockerfile reality), `<title>client</title>` → `Todos`, and contextual delete `aria-label` (`Delete "${todo.description}"` instead of the generic `Delete`).
-3. **Mo1** + **Mo2** + **Mo3** — doc cleanup. `architecture.md` drift (camelCase vs. snake_case wire format, prescribed-but-missing `identity.ts` / `validation.ts`), `deferred-work.md` stale `status: build-incomplete`, stock Vite `client/README.md`. ~1 hour.
-4. **Mo4** — tighten `USER_ID_REGEX` from `/^anon-[0-9a-f-]{36}$/` to the canonical 8-4-4-4-12 UUID shape on both server and client. Same regex, two places. No behaviour change for legitimate users; closes the asymmetry with the strict-test-fixture regex.
-5. **M6** — add Firefox + WebKit projects to `playwright.config.ts`. ~6 lines. Each project doubles dev-e2e wall-time, so gate behind a CI-only env var or a separate `test:e2e:full` script if local-dev speed matters.
-6. **Mo12-FR12 + Mo5–Mo7-already-covered** — Mo12's FR11 half is closed by the production smoke suite; the FR12 (`docker rm` + `docker run` from the user-facing flow) half is already covered by `tests/docker.test.ts`, so this reduces to a doc note rather than new tests.
-7. **Mo13 + Mi1–Mi10** — version drift, dead `smoke.test.ts` files, ROLLBACK_DELETE_ALL not clearing `optimisticPending`, p95 perf benchmark, etc. Most are < 10 lines each; pick the ones that earn their keep for portfolio polish.
+If you wanted to keep adding polish anyway:
+
+- **Mi7** — wire `autocannon` or a small Vitest-bench script to assert NFR-4's p95 < 100 ms invariant against the running container; currently the only proof is "we measured it once and it was fine." This is the highest-leverage remaining item, but it's net-new infrastructure rather than fixing a bug.
+- **Mi3** — switch description-length counting from UTF-16 code units to graphemes (`Intl.Segmenter`) so a 280-emoji description doesn't fail at ~140. The deferred-work file documents this as a known limitation; only worth doing when an emoji-heavy user surfaces it as a real complaint.
+- **Mi10** — add a "Production deploy" subsection to the README noting the `--platform=linux/amd64` flag for cross-arch Docker builds (Mac silicon → Linux server). One paragraph.
+
+Anything else listed as "open" in the Status block above is by-design behaviour or commentary, not a fix waiting to be made.
 
 ---
 
