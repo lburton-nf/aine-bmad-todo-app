@@ -14,9 +14,13 @@
 - ✅ **M1 fixed** — `e2e/rollback.spec.ts` adds three NFR-2 rollback tests (POST/PATCH/DELETE), one per mutation, with a 500 ms response delay so the optimistic frame is observable.
 - ✅ **M2 fixed** — `client/src/api.ts` now resets identity and retries once on `400` with an `X-User-Id` complaint; bounded by a `retried` flag. Three new tests in `client/src/api.test.ts`.
 - ✅ **M3 fixed** — both eslint configs upgraded to `recommendedTypeChecked` with `projectService: true`; server tsconfigs split (`tsconfig.json` for type-check / lint, new `tsconfig.build.json` for `tsc` emit). Sync Fastify handlers de-asynced; redundant `(err as ...).code` cast dropped.
+- ✅ **M4 fixed** — `TodoItem.tsx` now wraps the checkbox + description in a `<label className="todo-item__toggle">` with `min-height: 44px`, so the toggle tap target is a full 44px row strip (not the 18px native checkbox). The delete glyph is no longer `visibility: hidden`; it's always rendered, dimmed at `opacity: 0.5`, fading to `1` on row hover/focus or button hover/focus. Stale `row.hover()` preludes removed from e2e.
+- ✅ **Mo7 fixed** — `validateCreateBody` stores the trimmed description; `"  buy bread  "` round-trips as `"buy bread"`.
+- ✅ **Mo9 fixed** — same TodoItem label wrapper as M4 covers Mo9; clicking the description text now toggles completion via native label-delegation. Unit + e2e tests added.
+- ✅ **Mi9 fixed** — length check runs against trimmed length, so 280 meaningful chars wrapped in whitespace are accepted; 281 trimmed are still rejected.
 - ➕ **New: production smoke suite** — `playwright.docker.config.ts` + `e2e/smoke.docker.spec.ts` + `scripts/test-e2e-docker.sh`. Six tests run against the actual Docker artifact via `npm run test:e2e:docker`. Closes the static-serve / same-origin / production-bundle / AI-2-under-`@fastify/static` gap that the dev e2e never exercised, and incidentally covers the FR11 part of **Mo12**.
 
-Open: M4 (touch targets / hover-only delete), M5 (CI workflow), M6 (Firefox + WebKit Playwright projects), all Moderate / Minor items.
+Open: M5 (CI workflow), M6 (Firefox + WebKit Playwright projects), most other Moderate / Minor items.
 
 ---
 
@@ -64,7 +68,7 @@ The unaccompanying client-level `client/README.md:16-44` is the _Vite default RE
 
 **Fix:** swap to `tseslint.configs.recommendedTypeChecked` and wire `parserOptions.project` to the per-runtime tsconfig in both eslint configs. Expect ~5–15 new findings; review each.
 
-### M4. Touch targets violate the 44 px floor stated in the PRD
+### M4. ✅ FIXED — Touch targets violate the 44 px floor stated in the PRD
 
 PRD Web App Reqs → Responsive design → _"Touch targets ≥ 44 px square."_ User-acceptance demo step 7 explicitly tests at 320 px width.
 
@@ -140,7 +144,7 @@ Already documented as an open question in `deferred-work.md:94-95` but not fixed
 
 **Fix:** add a test that captures Pino output (custom destination stream), invokes a request with a known X-User-Id, and asserts the captured line does not contain it. This is the test that `deferred-work.md:94` already laid out — just needs to be written.
 
-### Mo7. Description is not trimmed before storage
+### Mo7. ✅ FIXED — Description is not trimmed before storage
 
 `server/src/routes/todos.ts:34-44` validates `description.trim()` for empty-check but persists `description` (raw) at line 109. A user typing `"  buy bread  "` gets that value — leading and trailing whitespace — written to SQLite and rendered back in the list. Probably not what FR1/FR25 intended.
 
@@ -152,7 +156,7 @@ Already documented as an open question in `deferred-work.md:94-95` but not fixed
 
 **Fix:** `aria-label={\`Delete "${todo.description}"\`}`. One line.
 
-### Mo9. Demo step 3 is ambiguous and probably broken as written
+### Mo9. ✅ FIXED — Demo step 3 is ambiguous and probably broken as written
 
 PRD Success Criteria → User Success → step 3: _"Click 'Buy milk' to mark it complete — the visual change is instant"_. The natural read is "click the description text." `TodoItem.tsx` only wires the checkbox; clicking the description span is a no-op. Either:
 
@@ -215,7 +219,7 @@ NFR-4: server p95 < 100 ms over ≥ 100 requests. There's no `autocannon`/`k6`/P
 
 Not a real issue (no cookies in v1), but `vite.config.ts:11-14` proxies `/todos` and `/healthz` only. Anything else added later (e.g., an admin route) needs to be added here too. Already an architectural seam — keeping a list of one-line entries is fine.
 
-### Mi9. `description.length > MAX` check uses raw length, not trimmed length
+### Mi9. ✅ FIXED — `description.length > MAX` check uses raw length, not trimmed length
 
 `server/src/routes/todos.ts:38` — a 281-char description with one trailing space is rejected on length even though the meaningful content is 280. Combined with **Mo7**, the right fix is: trim, then check `trimmed.length > MAX`, then store `trimmed`. One change handles both.
 
@@ -240,10 +244,10 @@ Multi-arch Docker builds need `--platform=linux/amd64` (or `arm64`) explicit if 
 
 ## Suggested fix order (by ROI)
 
-1. ~~**M2** + **Mo7** + **Mo9** + **Mi9**~~ — M2 done; Mo7/Mo9/Mi9 (description trim/length) still open and still coalesce into one ~10-line pass.
+1. ~~**M2** + **Mo7** + **Mo9** + **Mi9**~~ — done.
 2. ~~**M1**~~ — done.
 3. ~~**M3**~~ — done.
-4. **M4** — single-tap toggle (wrap in `<label>`) + un-hide delete button. ~10 lines + visual polish. Big a11y/mobile win.
+4. ~~**M4**~~ — done.
 5. **M5** — single CI workflow file. ~60 lines. Table-stakes for portfolio. Now even more leverage — `npm run test:e2e:docker` is ready to wire up.
 6. **Mo1** + **Mo2** + **Mo3** — doc cleanup. ~1 hour.
 7. **M6** — Firefox + WebKit projects in playwright config. ~6 lines.
