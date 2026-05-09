@@ -10,6 +10,16 @@ const USER_ID_REGEX = /^anon-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const DESCRIPTION_MAX = 280;
 
+// Count user-perceived characters, not UTF-16 code units. A description of
+// 280 emoji used to fail at ~140 because each emoji is a surrogate pair
+// (length 2 in UTF-16); Intl.Segmenter counts what the user actually typed
+// (REVIEW_1 Mi3). Constructed once at module load — segmenters are cheap
+// to reuse and not cheap to construct on every request.
+const DESCRIPTION_SEGMENTER = new Intl.Segmenter(undefined, { granularity: 'grapheme' });
+function graphemeCount(s: string): number {
+  return [...DESCRIPTION_SEGMENTER.segment(s)].length;
+}
+
 function badRequest(reply: FastifyReply, message: string): FastifyReply {
   return reply.code(400).send({ statusCode: 400, error: 'Bad Request', message });
 }
@@ -39,7 +49,7 @@ function validateCreateBody(body: unknown): CreateValidation {
   if (trimmed.length === 0) {
     return { ok: false, message: 'description must not be empty' };
   }
-  if (trimmed.length > DESCRIPTION_MAX) {
+  if (graphemeCount(trimmed) > DESCRIPTION_MAX) {
     return {
       ok: false,
       message: `description must be at most ${DESCRIPTION_MAX} characters`,

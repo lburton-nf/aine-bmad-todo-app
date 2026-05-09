@@ -297,6 +297,38 @@ test('Mi9: POST /todos counts trimmed length, not raw, against the 280 limit', a
   }
 });
 
+test('Mi3: POST /todos counts graphemes, not UTF-16 code units (mixed text + emoji)', async () => {
+  // FR26 bodyLimit (1 KB) is the binding constraint for pure-emoji payloads
+  // — 280 emoji at 4 UTF-8 bytes apiece is ~1.1 KB, rejected at the parser
+  // before the validator runs. So we exercise grapheme counting via mixed
+  // text+emoji payloads that comfortably fit under 1 KB but would have been
+  // rejected by the old `description.length` (UTF-16 code units) check.
+  const app = await makeApp();
+  try {
+    // 200 ASCII + 80 party-poppers = 280 graphemes.
+    // UTF-16 length = 200 + 160 = 360 — would be rejected by the OLD
+    // .length-based check. UTF-8 bytes = 200 + 320 = 520, under bodyLimit.
+    const mixed280 = 'a'.repeat(200) + '🎉'.repeat(80);
+    expect(mixed280.length).toBe(360);
+    const res = await postTodo(app, U1, { id: ID1, description: mixed280 });
+    expect(res.statusCode).toBe(201);
+
+    // 281st grapheme tips it over.
+    const mixed281 = 'a'.repeat(200) + '🎉'.repeat(81);
+    const overRes = await postTodo(app, U1, { id: ID2, description: mixed281 });
+    expect(overRes.statusCode).toBe(400);
+
+    // Multi-codepoint grapheme cluster: a regional-indicator flag is two
+    // codepoints (= one grapheme). 270 ASCII + 10 flags = 280 graphemes;
+    // UTF-16 length = 310 — old check would reject it. UTF-8 bytes = 350.
+    const flagsAndText = 'b'.repeat(270) + '🇬🇧'.repeat(10);
+    const flagRes = await postTodo(app, U1, { id: ID3, description: flagsAndText });
+    expect(flagRes.statusCode).toBe(201);
+  } finally {
+    await app.close();
+  }
+});
+
 test('POST /todos rejects bad ids (not a UUID, uppercase, missing)', async () => {
   const app = await makeApp();
   try {
