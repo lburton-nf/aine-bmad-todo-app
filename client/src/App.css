@@ -109,22 +109,26 @@
 }
 
 .delete-glyph {
-  /* 44x44 hit area per UX accessibility floor */
+  /* 44x44 hit area per UX accessibility floor. Always present in the DOM
+     and always pointer-reachable on touch devices; dimmed by default and
+     fades in on row hover/focus so it's discoverable without being noisy. */
   width: 44px;
   height: 44px;
   background: transparent;
   border: none;
   font-size: 20px;
   color: var(--color-text-muted);
+  opacity: 0.5;
   cursor: pointer;
-  visibility: hidden;
   border-radius: 4px;
+  transition: opacity 120ms ease;
 }
 
 .todo-item:hover .delete-glyph,
 .todo-item:focus-within .delete-glyph,
+.delete-glyph:hover,
 .delete-glyph:focus {
-  visibility: visible;
+  opacity: 1;
 }
 
 .delete-glyph:hover,

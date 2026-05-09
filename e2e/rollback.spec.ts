@@ -90,10 +90,7 @@ test('NFR-2: DELETE rollback — optimistic delete restores the row on server fa
     return route.continue();
   });
 
-  // Delete glyph is visibility:hidden until row hover.
-  const row = page.locator('.todo-item').first();
-  await row.hover();
-  await row.getByRole('button', { name: 'Delete' }).click();
+  await page.locator('.todo-item').first().getByRole('button', { name: 'Delete' }).click();
 
   // Optimistic: row removed before the server has responded.
   await expect(page.getByText('delete me')).toHaveCount(0);
