@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useReducer } from 'react';
+import { useCallback, useEffect, useReducer, type Dispatch } from 'react';
 import './App.css';
-import { todoReducer, initialState } from './reducer';
+import { todoReducer, initialState, type Action } from './reducer';
 import * as api from './api';
 import { ApiError } from './api';
 import { TodoInput } from './components/TodoInput';
@@ -16,6 +16,29 @@ function errorMessage(err: unknown): string {
     return err.message || 'Server error.';
   }
   return 'Something went wrong.';
+}
+
+interface OptimisticMutation<T> {
+  optimistic: Action;
+  apiCall: () => Promise<T>;
+  confirm: (result: T) => Action;
+  rollback: (reason: string) => Action;
+}
+
+// The NFR-2 contract in one place: dispatch the optimistic action synchronously,
+// then fire the API call and dispatch confirm-or-rollback when it settles.
+function runOptimisticMutation<T>(
+  dispatch: Dispatch<Action>,
+  mutation: OptimisticMutation<T>,
+): void {
+  dispatch(mutation.optimistic);
+  void (async () => {
+    try {
+      dispatch(mutation.confirm(await mutation.apiCall()));
+    } catch (err) {
+      dispatch(mutation.rollback(errorMessage(err)));
+    }
+  })();
 }
 
 function App() {
@@ -53,15 +76,12 @@ function App() {
       created_at: Date.now(),
       completed: false,
     };
-    dispatch({ type: 'OPTIMISTIC_CREATE', todo });
-    void (async () => {
-      try {
-        const persisted = await api.createTodo({ id: todo.id, description });
-        dispatch({ type: 'CONFIRM_CREATE', id: todo.id, todo: persisted });
-      } catch (err) {
-        dispatch({ type: 'ROLLBACK_CREATE', id: todo.id, reason: errorMessage(err) });
-      }
-    })();
+    runOptimisticMutation(dispatch, {
+      optimistic: { type: 'OPTIMISTIC_CREATE', todo },
+      apiCall: () => api.createTodo({ id: todo.id, description }),
+      confirm: (persisted) => ({ type: 'CONFIRM_CREATE', id: todo.id, todo: persisted }),
+      rollback: (reason) => ({ type: 'ROLLBACK_CREATE', id: todo.id, reason }),
+    });
   }, []);
 
   const handleToggle = useCallback(
@@ -69,15 +89,12 @@ function App() {
       const current = state.todos.find((t) => t.id === id);
       if (!current) return;
       const nextCompleted = !current.completed;
-      dispatch({ type: 'OPTIMISTIC_TOGGLE', id });
-      void (async () => {
-        try {
-          const persisted = await api.toggleCompleted(id, nextCompleted);
-          dispatch({ type: 'CONFIRM_TOGGLE', id, todo: persisted });
-        } catch (err) {
-          dispatch({ type: 'ROLLBACK_TOGGLE', id, reason: errorMessage(err) });
-        }
-      })();
+      runOptimisticMutation(dispatch, {
+        optimistic: { type: 'OPTIMISTIC_TOGGLE', id },
+        apiCall: () => api.toggleCompleted(id, nextCompleted),
+        confirm: (persisted) => ({ type: 'CONFIRM_TOGGLE', id, todo: persisted }),
+        rollback: (reason) => ({ type: 'ROLLBACK_TOGGLE', id, reason }),
+      });
     },
     [state.todos],
   );
@@ -86,30 +103,24 @@ function App() {
     (id: string) => {
       const snapshot = state.todos.find((t) => t.id === id);
       if (!snapshot) return;
-      dispatch({ type: 'OPTIMISTIC_DELETE', id });
-      void (async () => {
-        try {
-          await api.deleteTodo(id);
-          dispatch({ type: 'CONFIRM_DELETE', id });
-        } catch (err) {
-          dispatch({ type: 'ROLLBACK_DELETE', todo: snapshot, reason: errorMessage(err) });
-        }
-      })();
+      runOptimisticMutation(dispatch, {
+        optimistic: { type: 'OPTIMISTIC_DELETE', id },
+        apiCall: () => api.deleteTodo(id),
+        confirm: () => ({ type: 'CONFIRM_DELETE', id }),
+        rollback: (reason) => ({ type: 'ROLLBACK_DELETE', todo: snapshot, reason }),
+      });
     },
     [state.todos],
   );
 
   const handleDeleteAll = useCallback(() => {
     const snapshot = state.todos;
-    dispatch({ type: 'OPTIMISTIC_DELETE_ALL' });
-    void (async () => {
-      try {
-        await api.deleteAll();
-        dispatch({ type: 'CONFIRM_DELETE_ALL' });
-      } catch (err) {
-        dispatch({ type: 'ROLLBACK_DELETE_ALL', todos: snapshot, reason: errorMessage(err) });
-      }
-    })();
+    runOptimisticMutation(dispatch, {
+      optimistic: { type: 'OPTIMISTIC_DELETE_ALL' },
+      apiCall: () => api.deleteAll(),
+      confirm: () => ({ type: 'CONFIRM_DELETE_ALL' }),
+      rollback: (reason) => ({ type: 'ROLLBACK_DELETE_ALL', todos: snapshot, reason }),
+    });
   }, [state.todos]);
 
   // Retry just reloads the list. After a rollback, the optimistic state is
