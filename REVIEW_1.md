@@ -37,22 +37,22 @@ All Major findings closed. All Moderate items closed except commentary-only ones
 - ✅ **Mo12-FR12** — README test-coverage matrix maps the 8 PRD demo steps to test files; FR12's close-and-reopen flow is documented as a layered proof (localStorage persistence + volume persistence) rather than a brittle browser test.
 - ✅ **Mo13** — `@types/node` aligned at `^25.6.2` on both runtimes.
 
-**Minor — commentary or fixed:**
+**Minor — fixed or commentary-only:**
 
 - ✅ **Mi1** — dead `smoke.test.ts` and `types.smoke.test.ts` deleted.
 - ✅ **Mi2** — `HOST` env var added with safe defaults (`127.0.0.1` dev/test, `0.0.0.0` production).
-- ⚪️ **Mi3** — UTF-16 grapheme counting deferred by review's own admission.
+- ✅ **Mi3** — `validateCreateBody` now counts graphemes via `Intl.Segmenter` instead of UTF-16 code units; mixed text+emoji descriptions up to 280 graphemes are accepted, single multi-codepoint clusters (flags, ZWJ sequences) count as one. Pure-emoji 280 still hits the FR26 1 KB `bodyLimit` first by design.
 - ⚪️ **Mi4** — `ROLLBACK_DELETE_ALL` interleaving — review notes "behaviorally inconsistent in any case"; reasoning shows the interleaving doesn't actually break the contract. Skipping.
 - ⚪️ **Mi5** — POST 400 / duplicate-id is already handled correctly per the test suite; review entry was commentary-only.
 - ✅ **Mi6** — `DeleteAllControl` now focuses Cancel (safe default) instead of Erase.
-- ⚪️ **Mi7** — automated p95 perf benchmark not built; deferred.
+- ✅ **Mi7** — `server/src/perf.test.ts` runs 10 warmup + 100 measured iterations through Fastify `inject()` for each of GET/POST/PATCH/DELETE, asserts p95 < 100 ms. Catches NFR-4 regressions in normal `npm test` runs.
 - ⚪️ **Mi8** — Vite proxy / cookies — review notes "not a real issue (no cookies in v1)".
 - ✅ **Mi9** — length check runs against trimmed length.
-- ⚪️ **Mi10** — better-sqlite3 platform binary is a deploy-time consideration; doc note implicit in the multi-stage Dockerfile.
+- ✅ **Mi10** — README "Production deploy notes" section covers `--platform=linux/amd64` for cross-arch builds (Mac silicon → x86_64 host), required-in-production env vars, and the `/data` volume / WAL sidecar caveat.
 
 **New since the original review:** production smoke suite (`playwright.docker.config.ts` + `e2e/smoke.docker.spec.ts` + `scripts/test-e2e-docker.sh`), six tests run against the actual Docker artifact via `npm run test:e2e:docker`. Closes static-serve / same-origin / production-bundle / AI-2-under-`@fastify/static` gaps the dev e2e never exercised.
 
-Nothing actionable remains open from REVIEW_1.
+**Nothing actionable remains open from REVIEW_1.** The three remaining ⚪️ entries (Mi4, Mi5, Mi8) are either non-issues by the review's own admission or theoretical interleavings that don't break the contract.
 
 ---
 
@@ -227,7 +227,7 @@ Self-described at line 1: _"This proves the test harness works. Remove when the 
 
 Documented in `deferred-work.md:97`. `server/src/index.ts:29` hardcodes `host: '0.0.0.0'`. Correct for Docker; incorrect for dev — exposes the API on the local LAN. Either gate by `env.NODE_ENV` or introduce a `HOST` env var defaulting to `127.0.0.1` outside production.
 
-### Mi3. UTF-16 length-counting on description
+### Mi3. ✅ FIXED — UTF-16 length-counting on description
 
 Documented in `deferred-work.md:79`. A 280-emoji description fails at ~140 emoji because each surrogate pair counts as 2. Acceptable for v1; flag for the user when this surface gets v2 treatment.
 
@@ -243,7 +243,7 @@ Both surfaces return `{ message: "id already exists" }`. The architecture's AI-3
 
 `client/src/components/DeleteAllControl.tsx:37` — when the confirmation row appears, focus jumps to the **Erase** button, not Cancel. Common a11y/UX guidance defaults focus to the safe action so an accidental Enter can't destroy data. Debatable; flagging for consideration.
 
-### Mi7. No automated p95 perf benchmark
+### Mi7. ✅ FIXED — No automated p95 perf benchmark
 
 NFR-4: server p95 < 100 ms over ≥ 100 requests. There's no `autocannon`/`k6`/Playwright-perf script. For SQLite + `inject()`-based testing this is trivial to add; for a portfolio piece it's the kind of signal a reviewer looks for.
 
@@ -255,7 +255,7 @@ Not a real issue (no cookies in v1), but `vite.config.ts:11-14` proxies `/todos`
 
 `server/src/routes/todos.ts:38` — a 281-char description with one trailing space is rejected on length even though the meaningful content is 280. Combined with **Mo7**, the right fix is: trim, then check `trimmed.length > MAX`, then store `trimmed`. One change handles both.
 
-### Mi10. `better-sqlite3` is platform-specific
+### Mi10. ✅ FIXED — `better-sqlite3` is platform-specific
 
 Multi-arch Docker builds need `--platform=linux/amd64` (or `arm64`) explicit if you ever build on Mac silicon and ship to a Linux host of a different arch. `npm ci` on the runtime stage will refuse silently otherwise. Nice to mention in the README's "Production deploy" subsection (which doesn't exist yet).
 
@@ -276,15 +276,9 @@ Multi-arch Docker builds need `--platform=linux/amd64` (or `arm64`) explicit if 
 
 ## Suggested fix order (by ROI)
 
-**Nothing actionable remains.** The full Major + Moderate set is closed; all actionable Minor items are closed. The four open Minors (Mi3, Mi4, Mi5, Mi7, Mi8, Mi10) are either deferred-by-design (UTF-16 grapheme limit, p95 perf benchmark), commentary-only (Mi5/Mi8), or implicit doc notes (Mi10 platform binary).
+**Empty.** Every Major, every Moderate, and every actionable Minor finding from REVIEW_1 has shipped. The three remaining ⚪️ entries in the Minor list (Mi4, Mi5, Mi8) are non-issues called out in the review itself — left visible for the audit trail, not as work to do.
 
-If you wanted to keep adding polish anyway:
-
-- **Mi7** — wire `autocannon` or a small Vitest-bench script to assert NFR-4's p95 < 100 ms invariant against the running container; currently the only proof is "we measured it once and it was fine." This is the highest-leverage remaining item, but it's net-new infrastructure rather than fixing a bug.
-- **Mi3** — switch description-length counting from UTF-16 code units to graphemes (`Intl.Segmenter`) so a 280-emoji description doesn't fail at ~140. The deferred-work file documents this as a known limitation; only worth doing when an emoji-heavy user surfaces it as a real complaint.
-- **Mi10** — add a "Production deploy" subsection to the README noting the `--platform=linux/amd64` flag for cross-arch Docker builds (Mac silicon → Linux server). One paragraph.
-
-Anything else listed as "open" in the Status block above is by-design behaviour or commentary, not a fix waiting to be made.
+The codebase has moved well past the original "portfolio piece for senior-engineer colleagues" bar. Further changes should be driven by new requirements, not by REVIEW_1.
 
 ---
 
