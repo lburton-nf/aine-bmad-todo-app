@@ -10,6 +10,10 @@
     "test:docker": "vitest run --config vitest.config.ts",
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install chromium",
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "docker:verify": "docker compose up -d --build && npm run test:docker && docker compose down",
     "lint": "npm run lint --prefix client && npm run lint --prefix server",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
