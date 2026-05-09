@@ -41,8 +41,9 @@ export async function buildServer(opts: BuildServerOpts): Promise<FastifyInstanc
   });
 
   app.decorate('db', opts.db);
-  app.addHook('onClose', async (instance) => {
+  app.addHook('onClose', (instance) => {
     instance.db.close();
+    return Promise.resolve();
   });
 
   await app.register(cors, {
@@ -53,7 +54,7 @@ export async function buildServer(opts: BuildServerOpts): Promise<FastifyInstanc
     allowedHeaders: ['Content-Type', 'X-User-Id'],
   });
 
-  app.get('/healthz', async (): Promise<HealthResponse> => {
+  app.get('/healthz', (): HealthResponse => {
     return { ok: true, version: VERSION };
   });
 

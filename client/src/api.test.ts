@@ -35,7 +35,7 @@ function captureFetch(response: Partial<Response>): {
   return { fetchMock, calls };
 }
 
-function rejectingFetch(error: unknown) {
+function rejectingFetch(error: Error) {
   vi.stubGlobal(
     'fetch',
     vi.fn(() => Promise.reject(error)),

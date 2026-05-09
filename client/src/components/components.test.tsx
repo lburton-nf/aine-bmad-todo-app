@@ -56,8 +56,11 @@ test('TodoInput auto-focuses on mount and shows the placeholder', () => {
 // is bypassed by React. Use the native HTMLInputElement setter so React's
 // onChange picks up the change.
 function setInputValue(input: HTMLInputElement, value: string) {
-  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
-  setter?.call(input, value);
+  const setter = Object.getOwnPropertyDescriptor(
+    window.HTMLInputElement.prototype,
+    'value',
+  )?.set?.bind(input);
+  setter?.(value);
   input.dispatchEvent(new Event('input', { bubbles: true }));
 }
 

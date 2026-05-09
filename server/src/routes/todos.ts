@@ -69,11 +69,11 @@ function isPrimaryKeyViolation(err: unknown): boolean {
     typeof err === 'object' &&
     err !== null &&
     'code' in err &&
-    (err as { code: unknown }).code === 'SQLITE_CONSTRAINT_PRIMARYKEY'
+    err.code === 'SQLITE_CONSTRAINT_PRIMARYKEY'
   );
 }
 
-const todosRoutes: FastifyPluginAsync = async (app) => {
+const todosRoutes: FastifyPluginAsync = (app) => {
   // Plugin-scoped preHandler — runs for every route registered in this plugin
   // (the four /todos verbs), and only for those. /healthz and any other
   // app-level routes are unaffected.
@@ -97,7 +97,7 @@ const todosRoutes: FastifyPluginAsync = async (app) => {
     request.userId = userId;
   });
 
-  app.get('/todos', async (request) => {
+  app.get('/todos', (request) => {
     return app.db.listTodosForUser(request.userId);
   });
 
@@ -143,6 +143,8 @@ const todosRoutes: FastifyPluginAsync = async (app) => {
     app.db.deleteAllForUser(request.userId);
     return reply.code(204).send();
   });
+
+  return Promise.resolve();
 };
 
 export default todosRoutes;

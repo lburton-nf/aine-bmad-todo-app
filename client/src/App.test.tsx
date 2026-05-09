@@ -33,7 +33,7 @@ afterEach(() => {
 async function mount() {
   container = document.createElement('div');
   document.body.appendChild(container);
-  await act(async () => {
+  act(() => {
     root = createRoot(container!);
     root.render(<App />);
   });
@@ -166,19 +166,23 @@ test('typing in the input + Enter posts a new todo', async () => {
   const { calls } = captureFetch([]);
   const c = await mount();
   const input = c.querySelector<HTMLInputElement>('.todo-input')!;
-  const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set;
-  await act(async () => {
-    setter?.call(input, 'milk');
+  const setNativeValue = Object.getOwnPropertyDescriptor(
+    window.HTMLInputElement.prototype,
+    'value',
+  )?.set?.bind(input);
+  act(() => {
+    setNativeValue?.('milk');
     input.dispatchEvent(new Event('input', { bubbles: true }));
   });
-  await act(async () => {
+  act(() => {
     input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
   });
   await flush();
   const post = calls.find((call) => call.init.method === 'POST');
   expect(post).toBeDefined();
   expect(post!.url).toBe('/todos');
-  expect(JSON.parse(post!.init.body as string).description).toBe('milk');
+  const parsedBody = JSON.parse(post!.init.body as string) as { description: string };
+  expect(parsedBody.description).toBe('milk');
 });
 
 test('clicking the checkbox PATCHes /todos/:id', async () => {
@@ -193,7 +197,7 @@ test('clicking the checkbox PATCHes /todos/:id', async () => {
   const { calls } = captureFetch(seed);
   const c = await mount();
   const checkbox = c.querySelector<HTMLInputElement>('input[type="checkbox"]')!;
-  await act(async () => {
+  act(() => {
     checkbox.click();
   });
   await flush();
@@ -214,7 +218,7 @@ test('clicking the delete glyph DELETEs /todos/:id', async () => {
   const { calls } = captureFetch(seed);
   const c = await mount();
   const del = c.querySelector<HTMLButtonElement>('.delete-glyph')!;
-  await act(async () => {
+  act(() => {
     del.click();
   });
   await flush();
@@ -234,10 +238,10 @@ test('DeleteAllControl Erase DELETEs /todos (bulk)', async () => {
   ];
   const { calls } = captureFetch(seed);
   const c = await mount();
-  await act(async () => {
+  act(() => {
     c.querySelector<HTMLButtonElement>('.delete-all-link')!.click();
   });
-  await act(async () => {
+  act(() => {
     c.querySelector<HTMLButtonElement>('.delete-all-confirm__erase')!.click();
   });
   await flush();
@@ -264,7 +268,7 @@ test('Retry after a failed load reloads', async () => {
   const c = await mount();
   // Error rendered.
   expect(c.querySelector('[role="alert"]')).not.toBeNull();
-  await act(async () => {
+  act(() => {
     c.querySelector<HTMLButtonElement>('.state-message__retry')!.click();
   });
   await flush();
