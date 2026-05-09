@@ -167,3 +167,86 @@ test('AbortSignal.timeout firing throws ApiError(category=timeout)', async () =>
     category: 'timeout',
   });
 });
+
+// ─── FR9: client treats X-User-Id rejection as a reset trigger ───
+
+test('FR9: 400 "X-User-Id … missing or malformed" triggers identity reset and one retry', async () => {
+  localStorage.setItem('todo.userId', 'tampered-value');
+  const calls: { url: string; userId: string }[] = [];
+  let attempt = 0;
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((url: string, init: RequestInit = {}) => {
+      const headers = init.headers as Record<string, string>;
+      calls.push({ url, userId: headers['X-User-Id'] });
+      attempt += 1;
+      if (attempt === 1) {
+        // First call: localStorage was tampered, so getUserId() minted a fresh
+        // value but suppose the server still rejects (e.g., regex tightened).
+        return Promise.resolve({
+          ok: false,
+          status: 400,
+          statusText: 'Bad Request',
+          json: () => Promise.resolve({ message: 'X-User-Id header missing or malformed' }),
+        } as Response);
+      }
+      // Second call (after reset+retry): succeeds.
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        json: () => Promise.resolve([]),
+      } as Response);
+    }),
+  );
+
+  const result = await listTodos();
+  expect(result).toEqual([]);
+  expect(calls).toHaveLength(2);
+  // The retry must use a freshly minted user id, not the rejected one.
+  expect(calls[1].userId).not.toBe(calls[0].userId);
+  expect(calls[1].userId).toMatch(/^anon-/);
+});
+
+test('FR9: retry guard prevents an infinite reset loop on persistent 400', async () => {
+  let attempts = 0;
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(() => {
+      attempts += 1;
+      return Promise.resolve({
+        ok: false,
+        status: 400,
+        statusText: 'Bad Request',
+        json: () => Promise.resolve({ message: 'X-User-Id header missing or malformed' }),
+      } as Response);
+    }),
+  );
+  await expect(listTodos()).rejects.toBeInstanceOf(ApiError);
+  // One initial call + exactly one retry, no more.
+  expect(attempts).toBe(2);
+});
+
+test('FR9: a 400 unrelated to X-User-Id does NOT trigger a reset', async () => {
+  const before = localStorage.getItem('todo.userId');
+  let attempts = 0;
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(() => {
+      attempts += 1;
+      return Promise.resolve({
+        ok: false,
+        status: 400,
+        statusText: 'Bad Request',
+        json: () => Promise.resolve({ message: 'description must be at most 280 characters' }),
+      } as Response);
+    }),
+  );
+  await expect(listTodos()).rejects.toBeInstanceOf(ApiError);
+  expect(attempts).toBe(1);
+  // Identity untouched (note: getUserId() will mint on first read, so we read
+  // post-call to compare apples to apples — what matters is no second call
+  // happened with a different id).
+  const after = localStorage.getItem('todo.userId');
+  expect(after).toBe(before ?? after); // either both null/identical, or persisted same value
+});

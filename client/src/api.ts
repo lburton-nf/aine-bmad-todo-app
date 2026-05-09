@@ -3,7 +3,7 @@
 // ApiError. Six exported functions match the server's REST surface.
 
 import type { Todo, CreateTodoRequest, HealthResponse } from '../../shared/types';
-import { getUserId } from './identity';
+import { getUserId, reset as resetIdentity } from './identity';
 
 const BASE = (import.meta.env.VITE_API_BASE_URL ?? '') as string;
 const DEFAULT_TIMEOUT_MS = 10_000;
@@ -28,7 +28,7 @@ interface RequestOpts {
   timeoutMs?: number;
 }
 
-async function request<T>(path: string, opts: RequestOpts = {}): Promise<T> {
+async function request<T>(path: string, opts: RequestOpts = {}, retried = false): Promise<T> {
   const { method = 'GET', body, timeoutMs = DEFAULT_TIMEOUT_MS } = opts;
 
   const headers: Record<string, string> = {
@@ -62,6 +62,14 @@ async function request<T>(path: string, opts: RequestOpts = {}): Promise<T> {
       if (typeof data.message === 'string') message = data.message;
     } catch {
       // Body wasn't JSON; fall back to statusText.
+    }
+    // FR9: a 400 with an X-User-Id complaint means the server doesn't recognise
+    // our identifier (tampered localStorage, validation regex tightened across
+    // versions, etc.). Reset to a fresh anon-{uuid} and retry once. Bounded by
+    // `retried` so a misbehaving server can't loop us.
+    if (response.status === 400 && !retried && /X-User-Id/i.test(message)) {
+      resetIdentity();
+      return request<T>(path, opts, true);
     }
     throw new ApiError('server', message, response.status);
   }
