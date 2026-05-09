@@ -165,6 +165,15 @@ Planning artifacts in `_bmad-output/planning-artifacts/`:
 Per-story specs (with Spec Change Logs documenting review-driven amendments)
 live in `_bmad-output/implementation-artifacts/`.
 
+## Security
+
+Security review and light pen test of the production Docker artifact:
+[SECURITY_REVIEW.md](SECURITY_REVIEW.md). 22 probes across SQL injection,
+cross-user isolation, path traversal, XSS, CORS, container privilege,
+build-layer secrets, and `npm audit` × 6 — no exploitable findings, two
+Low (defence-in-depth headers + CORS allow-methods latent split-origin
+breakage), four Informational.
+
 ## Repository layout
 
 ```
