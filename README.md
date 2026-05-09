@@ -151,19 +151,19 @@ Boring-stack rationale per the architecture's "boring governor": pick the
 option that needs the least justification for a 6-route, single-user-per-
 browser v1.
 
-| Concern             | Chosen                   | Considered               | Why                                                                     |
-| ------------------- | ------------------------ | ------------------------ | ----------------------------------------------------------------------- |
-| Server framework    | **Fastify v5**           | Express, Hono, Koa       | Native Pino logging, schema validation built-in, sync hooks             |
-| HTTP client         | **fetch**                | axios, ky                | Built-in; `AbortSignal.timeout` covers the timeout category natively    |
-| Persistence         | **better-sqlite3**       | sqlite3, Postgres        | Synchronous API, prepared-statement caching, single file, zero ops      |
-| Frontend framework  | **React 19**             | Vue, Svelte, Solid       | Familiar; `useReducer` matches the optimistic-UI confirm/rollback       |
-| Build tool          | **Vite 8**               | Webpack, Parcel, esbuild | Vite proxy is one block of config; HMR is fast                          |
-| State               | **`useReducer`**         | Redux, Zustand, Jotai    | One reducer of 17 actions; no library earns its keep here               |
-| Validation          | **Hand-rolled**          | zod, valibot, yup        | 6 routes, ~30 lines of inline checks; no need for a library             |
-| Component testing   | **vitest + jsdom**       | Jest, Vitest + RTL       | RTL deliberately skipped per test-strategy; jsdom + react-dom is enough |
-| E2E                 | **Playwright**           | Cypress, WebdriverIO     | Best-in-class for multi-browser; trace viewer is debugging gold         |
-| Accessibility audit | **@axe-core/playwright** | pa11y, lighthouse-ci     | Runs in-process during E2E; zero extra infrastructure                   |
-| Container runtime   | **node:20-alpine**       | distroless, scratch      | curl available for HEALTHCHECK; Alpine is small enough                  |
+| Concern             | Chosen                   | Considered               | Why                                                                             |
+| ------------------- | ------------------------ | ------------------------ | ------------------------------------------------------------------------------- |
+| Server framework    | **Fastify v5**           | Express, Hono, Koa       | Native Pino logging, schema validation built-in, sync hooks                     |
+| HTTP client         | **fetch**                | axios, ky                | Built-in; `AbortSignal.timeout` covers the timeout category natively            |
+| Persistence         | **better-sqlite3**       | sqlite3, Postgres        | Synchronous API, prepared-statement caching, single file, zero ops              |
+| Frontend framework  | **React 19**             | Vue, Svelte, Solid       | Familiar; `useReducer` matches the optimistic-UI confirm/rollback               |
+| Build tool          | **Vite 8**               | Webpack, Parcel, esbuild | Vite proxy is one block of config; HMR is fast                                  |
+| State               | **`useReducer`**         | Redux, Zustand, Jotai    | One reducer of 17 actions; no library earns its keep here                       |
+| Validation          | **Hand-rolled**          | zod, valibot, yup        | 6 routes, ~30 lines of inline checks; no need for a library                     |
+| Component testing   | **vitest + jsdom**       | Jest, Vitest + RTL       | RTL deliberately skipped per test-strategy; jsdom + react-dom is enough         |
+| E2E                 | **Playwright**           | Cypress, WebdriverIO     | Best-in-class for multi-browser; trace viewer is debugging gold                 |
+| Accessibility audit | **@axe-core/playwright** | pa11y, lighthouse-ci     | Runs in-process during E2E; zero extra infrastructure                           |
+| Container runtime   | **node:20-alpine**       | distroless, scratch      | busybox `wget` covers HEALTHCHECK with no extra package; Alpine is small enough |
 
 The single rule that reduces decisions across the board: **don't add a
 dependency unless v1's deliberately-small scope demands it**. Most

@@ -117,11 +117,14 @@ test('Mo9: clicking the description text toggles via the label wrapper', () => {
 test('TodoItem delete button click invokes onDelete with the id', () => {
   const onDelete = vi.fn();
   const c = mount(<TodoItem todo={T1} pending={false} onToggle={() => {}} onDelete={onDelete} />);
-  const button = c.querySelector<HTMLButtonElement>('button[aria-label="Delete"]')!;
+  const button = c.querySelector<HTMLButtonElement>('button[aria-label^="Delete"]')!;
   act(() => {
     button.click();
   });
   expect(onDelete).toHaveBeenCalledWith(T1.id);
+  // Mo8: aria-label is contextual (carries the description) so a screen reader
+  // user knows which row is being deleted.
+  expect(button.getAttribute('aria-label')).toBe(`Delete "${T1.description}"`);
 });
 
 test('TodoItem applies the pending class when pending=true', () => {

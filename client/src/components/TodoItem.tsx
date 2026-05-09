@@ -28,7 +28,7 @@ export function TodoItem({ todo, pending, onToggle, onDelete }: Props) {
         type="button"
         className="delete-glyph"
         onClick={() => onDelete(todo.id)}
-        aria-label="Delete"
+        aria-label={`Delete "${todo.description}"`}
       >
         ×
       </button>
