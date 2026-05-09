@@ -10,20 +10,39 @@ from a single Fastify process.
 ```bash
 git clone <this repo> todo-app-3
 cd todo-app-3
+npm run docker:up          # builds the image and starts the container detached on :3000
+```
+
+Open <http://localhost:3000>. Data persists in `./data/todos.db` on the host
+across container restarts.
+
+```bash
+npm run docker:logs        # tail container logs
+npm run docker:down        # stop and remove the container
+```
+
+`docker:up` is `docker compose up -d --build` — see `package.json` and
+`docker-compose.yml` for the full set.
+
+<details>
+<summary>Running without the npm scripts (debugging / deconstructing the build)</summary>
+
+These are the same steps the npm scripts wrap, useful when you want to
+inspect a stage in isolation — e.g. building the image without running it,
+or running with non-default env vars.
+
+```bash
+# Foreground compose (logs stream to your terminal, Ctrl-C to stop):
+docker compose up --build
+
+# Or build + run the image directly, no compose:
 docker build -t todo-app-3 .
 docker run -p 3000:3000 -v "$PWD/data:/data" \
   -e CORS_ORIGIN=http://localhost:3000 \
   todo-app-3
 ```
 
-Open <http://localhost:3000>. Data persists in `./data/todos.db` on the host
-across `docker rm` + `docker run`.
-
-Or via Compose:
-
-```bash
-docker compose up --build
-```
+</details>
 
 ## Local development
 
@@ -59,8 +78,8 @@ npm run test:coverage      # both runtimes with 80% line/branch/func/stmt thresh
 npm run lint               # eslint, both runtimes
 npm run format:check       # prettier
 npm run test:docker        # Docker container persistence-across-restart test
-                           # (skips if Docker unavailable; requires
-                           # `docker build -t todo-app-3 .` first)
+                           # (skips if Docker unavailable or the image isn't built;
+                           # use `npm run docker:verify` to build + test + tear down)
 npm run test:e2e:install   # Downloads Chromium for Playwright (one-time, ~200 MB)
 npm run test:e2e           # Playwright E2E + axe-core a11y audit (10 tests)
 ```
