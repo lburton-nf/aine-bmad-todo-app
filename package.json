@@ -7,6 +7,7 @@
     "dev": "concurrently -n client,server -c cyan,magenta \"npm run dev --prefix client\" \"npm run dev --prefix server\"",
     "test": "npm test --prefix client && npm test --prefix server",
     "test:coverage": "concurrently --group --names client,server -c cyan,magenta \"npm run test:coverage --prefix client\" \"npm run test:coverage --prefix server\"",
+    "test:perf": "npm run test:perf --prefix server",
     "test:docker": "vitest run --config vitest.config.ts",
     "test:e2e": "playwright test",
     "test:e2e:install": "playwright install chromium",

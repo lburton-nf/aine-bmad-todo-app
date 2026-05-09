@@ -28,6 +28,16 @@ function p95(samples: number[]): number {
   return sorted[Math.floor(sorted.length * 0.95)];
 }
 
+function reportPerf(label: string, samples: number[]): number {
+  const p = p95(samples);
+  // Emit a single line per route so `npm run test:perf` (which uses the
+  // verbose reporter) shows actual latencies, not just pass/fail. The
+  // default reporter used by plain `npm test` swallows test stdout, so
+  // these lines don't add noise to normal runs.
+  console.log(`  ${label.padEnd(20)} p95 = ${p.toFixed(2)}ms`);
+  return p;
+}
+
 function uuid(suffix: number): string {
   // Deterministic UUID-shaped ids: aaaaaaaa-aaaa-aaaa-aaaa-<12 hex>.
   return `aaaaaaaa-aaaa-aaaa-aaaa-${suffix.toString(16).padStart(12, '0')}`;
@@ -57,7 +67,7 @@ test(`NFR-4: GET /todos p95 < ${P95_BUDGET_MS}ms over ${ITERATIONS} requests`, a
       samples.push(performance.now() - start);
       expect(res.statusCode).toBe(200);
     }
-    const p = p95(samples);
+    const p = reportPerf('GET /todos', samples);
     expect(p, `GET /todos p95=${p.toFixed(2)}ms`).toBeLessThan(P95_BUDGET_MS);
   } finally {
     await app.close();
@@ -88,7 +98,7 @@ test(`NFR-4: POST /todos p95 < ${P95_BUDGET_MS}ms over ${ITERATIONS} requests`, 
       samples.push(performance.now() - start);
       expect(res.statusCode).toBe(201);
     }
-    const p = p95(samples);
+    const p = reportPerf('POST /todos', samples);
     expect(p, `POST /todos p95=${p.toFixed(2)}ms`).toBeLessThan(P95_BUDGET_MS);
   } finally {
     await app.close();
@@ -121,7 +131,7 @@ test(`NFR-4: PATCH /todos/:id p95 < ${P95_BUDGET_MS}ms over ${ITERATIONS} reques
       samples.push(performance.now() - start);
       expect(res.statusCode).toBe(200);
     }
-    const p = p95(samples);
+    const p = reportPerf('PATCH /todos/:id', samples);
     expect(p, `PATCH /todos/:id p95=${p.toFixed(2)}ms`).toBeLessThan(P95_BUDGET_MS);
   } finally {
     await app.close();
@@ -156,7 +166,7 @@ test(`NFR-4: DELETE /todos/:id p95 < ${P95_BUDGET_MS}ms over ${ITERATIONS} reque
       samples.push(performance.now() - start);
       expect(res.statusCode).toBe(204);
     }
-    const p = p95(samples);
+    const p = reportPerf('DELETE /todos/:id', samples);
     expect(p, `DELETE /todos/:id p95=${p.toFixed(2)}ms`).toBeLessThan(P95_BUDGET_MS);
   } finally {
     await app.close();

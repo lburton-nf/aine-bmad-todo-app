@@ -80,6 +80,8 @@ npm run format:check       # prettier
 npm run test:docker        # Docker container persistence-across-restart test
                            # (skips if Docker unavailable or the image isn't built;
                            # use `npm run docker:verify` to build + test + tear down)
+npm run test:perf          # NFR-4 p95 latency check — 100 reqs/route in-process
+                           # via Fastify inject(); prints actual p95 per route
 npm run test:e2e:install   # Downloads Chromium for Playwright (one-time, ~200 MB)
 npm run test:e2e           # Playwright E2E + axe-core a11y audit (10 tests)
 ```
