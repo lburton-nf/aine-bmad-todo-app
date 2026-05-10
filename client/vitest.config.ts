@@ -5,6 +5,7 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: 'jsdom',
+    setupFiles: ['./src/setupTests.ts'],
     include: ['src/**/*.test.{ts,tsx}'],
     coverage: {
       provider: 'v8',
@@ -12,6 +13,7 @@ export default defineConfig({
       include: ['src/**/*.{ts,tsx}'],
       exclude: [
         'src/**/*.test.{ts,tsx}',
+        'src/setupTests.ts',
         // Entry point — calls `createRoot().render(<App/>)`; nothing testable in isolation.
         'src/main.tsx',
         'src/vite-env.d.ts',
