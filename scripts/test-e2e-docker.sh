@@ -8,6 +8,11 @@ CONTAINER=${CONTAINER:-todo-app-3-smoke}
 PORT=${PORT:-3098}
 IMAGE=${IMAGE:-todo-app-3}
 DATA_DIR=$(mktemp -d -t todo-app-3-smoke.XXXXXX)
+# mktemp -d creates 0o700 owned by the script's user. The container runs as
+# USER node (uid 1000); on Linux native dockerd that uid differs from the CI
+# runner user (uid 1001 on GitHub Actions ubuntu-latest), so the container
+# can't write to /data. Loosen perms — this is a per-run tempdir.
+chmod 0777 "${DATA_DIR}"
 BASE_URL="http://localhost:${PORT}"
 
 cleanup() {
